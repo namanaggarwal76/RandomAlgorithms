@@ -1,9 +1,10 @@
 # Analysis of Random Algorithms
 
-This project contains implementations and benchmarks for three randomized algorithms:
+This project contains implementations and benchmarks for four randomized algorithms:
 1.  **Frievald's Algorithm**: Probabilistic matrix multiplication verification.
 2.  **Miller-Rabin Primality Test**: Probabilistic primality testing.
 3.  **Randomized Quicksort**: Sorting algorithm with random pivots.
+4.  **LogLog / HyperLogLog / HyperLogLog++**: Cardinality estimation algorithms (benchmark and analysis under the `cardinality` folder).
 
 ## Structure
 
@@ -69,6 +70,11 @@ python benchmarks/miller_rabin/run_all.py
 python benchmarks/qsort/run_all.py
 ```
 
+**Cardinality (LL, HLL, HLL++):**
+```bash
+python benchmarks/cardinality/run_all.py
+```
+
 ### 5. Analyze Results
 
 Generate plots and analysis from the benchmark results.
@@ -86,6 +92,11 @@ python analysis/miller_rabin/analyze_miller_rabin.py
 **Randomized Quicksort:**
 ```bash
 python analysis/qsort/analyze_qsort.py
+```
+
+**Cardinality (LL, HLL, HLL++):**
+```bash
+python analysis/cardinality/analyze_cardinality.py
 ```
 
 ## Cleaning Up
