@@ -1,5 +1,0 @@
-bits,strategy,recommended_k,fp_threshold,acc_threshold
-32,fixed_small,5,1e-06,0.999
-32,random,5,1e-06,0.999
-40,fixed_small,5,1e-06,0.999
-40,random,5,1e-06,0.999

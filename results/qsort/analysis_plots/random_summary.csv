@@ -1,0 +1,8 @@
+category,filename,n,median_time,mean_time,std_time,median_comparisons,median_swaps,correctness_rate
+random,random_1000.txt,1000.0,0.0,0.0,0.0,11212.5,5581.0,1.0
+random,random_10000.txt,10000.0,0.0,0.0,0.0,154081.5,76775.5,1.0
+random,random_100000.txt,100000.0,5.0,5.3,0.9233805168766387,1996150.0,1014386.0,1.0
+random,random_2000.txt,2000.0,0.0,0.0,0.0,24043.5,12396.0,1.0
+random,random_20000.txt,20000.0,1.0,1.05,0.22360679774997894,330904.0,164845.0,1.0
+random,random_5000.txt,5000.0,0.0,0.0,0.0,71394.5,36068.0,1.0
+random,random_50000.txt,50000.0,2.0,2.27,0.547814758929522,933808.5,462963.5,1.0

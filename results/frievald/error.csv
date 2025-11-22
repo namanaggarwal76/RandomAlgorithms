@@ -1,0 +1,6 @@
+n,k,error_mode,false_accept_count,total_trials,false_accept_rate
+500,1,random_element,522,1000,0.522
+500,2,random_element,227,1000,0.227
+500,5,random_element,35,1000,0.035
+500,10,random_element,4,1000,0.004
+500,20,random_element,0,1000,0

@@ -1,0 +1,9 @@
+category,filename,n,median_time,mean_time,std_time,median_comparisons,median_swaps,correctness_rate
+duplicates,duplicates_100.txt,100.0,0.0,0.0,0.0,876.5,252.0,1.0
+duplicates,duplicates_1000.txt,1000.0,0.0,0.0,0.0,53348.5,2746.0,1.0
+duplicates,duplicates_10000.txt,10000.0,4.0,3.25,1.118033988749895,5034304.0,27434.5,1.0
+duplicates,duplicates_100000.txt,100000.0,199.5,200.95,6.039126810357524,500381226.0,295065.5,1.0
+duplicates,duplicates_2000.txt,2000.0,0.0,0.0,0.0,207299.0,5616.5,1.0
+duplicates,duplicates_20000.txt,20000.0,8.0,9.35,2.539685019840059,20077529.5,57904.5,1.0
+duplicates,duplicates_5000.txt,5000.0,1.0,0.7,0.47016234598162726,1269518.0,15414.0,1.0
+duplicates,duplicates_50000.txt,50000.0,50.0,51.95,4.260899336747437,125186021.5,145318.0,1.0

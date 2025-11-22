@@ -1,1 +1,0 @@
-"""Frievald benchmark package."""

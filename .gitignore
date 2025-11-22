@@ -1,3 +1,5 @@
-datasets/
 venv/
 .specstory/
+.vscode/
+__pycache__/
+bin/
