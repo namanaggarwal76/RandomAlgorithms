@@ -1,5 +1,0 @@
-category,filename,n,median_time,mean_time,std_time,median_comparisons,median_swaps,correctness_rate
-uniform,uniform_100.txt,100.0,0.0,0.0,0.0,625.0,321.0,1.0
-uniform,uniform_1000.txt,1000.0,0.0,0.0,0.0,10922.0,5338.5,1.0
-uniform,uniform_10000.txt,10000.0,0.0,0.05,0.22360679774997894,152369.0,78179.5,1.0
-uniform,uniform_100000.txt,100000.0,6.0,6.65,1.9808291724745763,2026859.5,1016151.5,1.0

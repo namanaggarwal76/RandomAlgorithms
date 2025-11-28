@@ -24,7 +24,7 @@ def gen_qsort_duplicates(n):
 
 def generate_qsort_datasets(out_dir):
     print("Generating QuickSort datasets...")
-    sizes = [1000, 2000, 5000, 10000, 20000, 50000, 100000]
+    sizes = [1000, 2000, 5000, 10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000]
     categories = {
         "random": gen_qsort_uniform,
         "sorted": gen_qsort_sorted,

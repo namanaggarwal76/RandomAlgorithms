@@ -199,13 +199,10 @@ int main(int argc, char **argv) {
     mt19937 rng(static_cast<uint32_t>(args.seed));
 
     auto t0 = chrono::high_resolution_clock::now();
-    clock_t cpu0 = clock();
     quicksort(arr, 0, static_cast<int>(arr.size()) - 1, rng, counters, 0);
-    clock_t cpu1 = clock();
     auto t1 = chrono::high_resolution_clock::now();
 
     auto elapsed_ms = chrono::duration_cast<chrono::milliseconds>(t1 - t0).count();
-    long long cpu_ms = static_cast<long long>((cpu1 - cpu0) * 1000.0 / CLOCKS_PER_SEC);
 
     // Measure std::sort time
     auto t2 = chrono::high_resolution_clock::now();
@@ -219,7 +216,7 @@ int main(int argc, char **argv) {
     string category = infer_category_from_path(args.input_file);
     long long n = static_cast<long long>(data.size());
 
-    const string header = "timestamp_utc_iso,category,input_file,n,seed,rep_id,elapsed_ms,cpu_ms,comparisons,swaps,correct,std_sort_ms,recursion_depth,bad_split_count";
+    const string header = "timestamp_utc_iso,category,input_file,n,seed,rep_id,elapsed_ms,comparisons,swaps,correct,std_sort_ms,recursion_depth,bad_split_count";
 
     // Ensure output directory exists (fail with friendly msg if not)
     fs::path out_path(args.out_csv);
@@ -239,7 +236,6 @@ int main(int argc, char **argv) {
         << args.seed << ","
         << args.rep_id << ","
         << elapsed_ms << ","
-        << cpu_ms << ","
         << counters.comparisons << ","
         << counters.swaps << ","
         << correct << ","
