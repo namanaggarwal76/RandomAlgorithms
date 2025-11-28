@@ -15,6 +15,9 @@ $PYTHON datasets/generate_all.py
 echo "=== Generating Cardinality Datasets ==="
 $PYTHON datasets/cardinality/generate_streams.py --out-dir datasets/cardinality
 
+echo "=== Generating MinCut Datasets ==="
+$PYTHON datasets/mincut/generate_graphs.py --out-dir datasets/mincut
+
 echo "=== Running Quicksort Benchmarks ==="
 $PYTHON benchmarks/qsort/run_all.py
 
@@ -30,6 +33,9 @@ $PYTHON benchmarks/miller_rabin/run_all.py --dataset-dir datasets/miller_rabin -
 echo "=== Running Cardinality Benchmarks ==="
 ./bin/cardinality_benchmark --dataset-dir datasets/cardinality --out-dir results/cardinality
 
+echo "=== Running MinCut Benchmarks ==="
+$PYTHON benchmarks/mincut/run_all.py --dataset-dir datasets/mincut --out-dir results/mincut --reps 5
+
 echo "=== Running Analysis ==="
 # Quicksort
 $PYTHON analysis/qsort/analyze_qsort.py --results results/qsort/qsort_master.csv --out-dir results/qsort/analysis_plots
@@ -42,5 +48,8 @@ $PYTHON analysis/miller_rabin/analyze_miller_rabin.py --summary results/miller_r
 
 # Cardinality
 $PYTHON analysis/cardinality/analyze_cardinality.py --raw results/cardinality/cardinality_raw.csv --summary results/cardinality/cardinality_summary.csv --out-dir results/cardinality/analysis_plots
+
+# MinCut
+$PYTHON analysis/mincut/analyze_mincut.py results/mincut/mincut_results.csv
 
 echo "=== All Done! Results are in results/ ==="
