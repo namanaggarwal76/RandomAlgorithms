@@ -4,141 +4,107 @@ import os
 from pathlib import Path
 import pandas as pd
 from sympy import isprime
-import math
 import sys
 
-def run_benchmark(dataset_dir, raw_csv_path):
+def run_benchmark(dataset_dir, out_dir):
     dataset_dir = Path(dataset_dir)
-    raw_csv_path = Path(raw_csv_path)
-    raw_csv_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Temporary raw output
-    temp_csv = raw_csv_path.with_name("temp_out.csv")
-    if temp_csv.exists():
-        temp_csv.unlink()
-        
-    files = sorted(list(dataset_dir.glob("*.txt")))
-    
-    # Path to Python implementation
-    script_path = Path("src/miller_rabin/python/miller_rabin.py").resolve()
-    if not script_path.exists():
-        print(f"Error: Python implementation not found at {script_path}")
-        sys.exit(1)
-
-    for f in files:
-        print(f"Processing {f}...")
-        # Experiment 1: Scaling with bit-length (fixed k=5, 10)
-        for k in [5, 10]:
-            cmd = [
-                sys.executable, str(script_path),
-                "--input-file", str(f),
-                "--out-csv", str(temp_csv),
-                "--k", str(k),
-                "--seed", "42"
-            ]
-            subprocess.run(cmd, check=True)
-            
-        # Experiment 2: Error rate vs k (composites only)
-        if "composites" in f.name or "carmichael" in f.name:
-             for k in [1, 2, 3, 5, 10, 15, 20]:
-                # Skip 5 and 10 as they are covered above, unless we want separate runs? 
-                # The script appends, so we might get duplicates if we are not careful.
-                # But the analysis can handle it or we can just run all k here.
-                if k in [5, 10]: continue 
-                
-                cmd = [
-                    sys.executable, str(script_path),
-                    "--input-file", str(f),
-                    "--out-csv", str(temp_csv),
-                    "--k", str(k),
-                    "--seed", "42"
-                ]
-                subprocess.run(cmd, check=True)
-
-    return temp_csv
-
-def post_process(temp_csv, final_raw_csv, summary_csv, dataset_dir):
-    print("Post-processing results...")
-    if not temp_csv.exists():
-        print("No results generated.")
-        return
-
-    df = pd.read_csv(temp_csv)
-    
-    # Load Carmichael numbers
-    carmichael_file = Path(dataset_dir) / "carmichael.txt"
-    carmichaels = set()
-    if carmichael_file.exists():
-        with open(carmichael_file, 'r') as f:
-            carmichaels = set(int(line.strip()) for line in f if line.strip())
-            
-    df['is_carmichael'] = df['n'].isin(carmichaels)
-    
-    # Add derived columns
-    df['bits'] = df['n'].apply(lambda x: x.bit_length())
-    df['rounds'] = df['k']
-    df['time_ms'] = df['time_ns'] / 1e6
-    
-    # Ground truth
-    print("Calculating ground truth...")
-    unique_n = df['n'].unique()
-    truth_map = {n: isprime(int(n)) for n in unique_n}
-    df['ground_truth'] = df['n'].map(truth_map)
-    
-    df['probable_prime'] = df['is_probable_prime'].astype(bool)
-    df['correct'] = df['probable_prime'] == df['ground_truth']
-    
-    # False positive: Composite but said probable prime
-    df['false_positive'] = (~df['ground_truth']) & (df['probable_prime'])
-    
-    # Save raw
-    df.to_csv(final_raw_csv, index=False)
-    print(f"Saved raw results to {final_raw_csv}")
-    
-    # Aggregate for summary
-    agg_rows = []
-    for (bits, rounds), group in df.groupby(['bits', 'rounds']):
-        total = len(group)
-        false_pos = group['false_positive'].sum()
-        
-        comp_group = group[~group['ground_truth']]
-        comp_total = len(comp_group)
-        comp_fp = comp_group['false_positive'].sum()
-        
-        agg_rows.append({
-            "bits": bits,
-            "rounds": rounds,
-            "samples": total,
-            "accuracy": group.correct.mean(),
-            "false_positives": false_pos,
-            "false_positive_rate": false_pos / total if total else 0.0,
-            "composite_only_fp_rate": (comp_fp / comp_total) if comp_total else 0.0,
-            "avg_time_ms": group.time_ms.mean(),
-            "avg_modexp": group.modexp_count.mean() if 'modexp_count' in group.columns else 0
-        })
-        
-    summary_df = pd.DataFrame(agg_rows)
-    summary_df.to_csv(summary_csv, index=False)
-    print(f"Saved summary to {summary_csv}")
-    
-    # Cleanup
-    if temp_csv.exists():
-        temp_csv.unlink()
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset-dir", default="datasets/miller_rabin", help="Dataset directory")
-    parser.add_argument("--out-dir", default="results/miller_rabin", help="Output directory")
-    args = parser.parse_args()
-    
-    out_dir = Path(args.out_dir)
+    out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     
-    raw_csv = out_dir / "miller_rabin_raw.csv"
-    summary_csv = out_dir / "miller_rabin_summary.csv"
+    python_script = Path("src/miller_rabin/python/miller_rabin.py").resolve()
+    cpp_binary = Path("bin/miller_rabin").resolve()
     
-    temp_csv = run_benchmark(args.dataset_dir, raw_csv)
-    post_process(temp_csv, raw_csv, summary_csv, args.dataset_dir)
+    if not python_script.exists():
+        print(f"Error: Python script not found at {python_script}")
+        return
+        
+    # --- 1. Performance Benchmark (Python, Large Numbers) ---
+    print("Running Performance Benchmark (Python)...")
+    perf_csv_path = out_dir / "miller_rabin_raw.csv"
+    temp_perf_csv = out_dir / "temp_perf.csv"
+    if temp_perf_csv.exists(): temp_perf_csv.unlink()
+    
+    large_files = list(dataset_dir.glob("*_large.txt"))
+    for f in large_files:
+        print(f"  Processing {f.name}...")
+        for k in [5, 10]:
+            subprocess.run([sys.executable, str(python_script), "--input-file", str(f), "--out-csv", str(temp_perf_csv), "--k", str(k)], check=True)
+            
+    if temp_perf_csv.exists():
+        df = pd.read_csv(temp_perf_csv)
+        # Ensure n is treated as python int (arbitrary precision)
+        df['n'] = df['n'].astype(str).apply(int)
+        df['bits'] = df['n'].apply(lambda x: x.bit_length())
+        df['time_ms'] = df['time_ns'] / 1e6
+        df.to_csv(perf_csv_path, index=False)
+        
+        # Summary
+        summary_csv = out_dir / "miller_rabin_summary.csv"
+        summary = df.groupby(['bits', 'k'])['time_ms'].mean().reset_index()
+        summary.rename(columns={'time_ms': 'avg_time_ms', 'k': 'rounds'}, inplace=True)
+        summary.to_csv(summary_csv, index=False)
+        print(f"  Saved performance results to {perf_csv_path}")
+        temp_perf_csv.unlink()
+
+    # --- 2. Error Rate Analysis (Python, Composites) ---
+    print("Running Error Rate Analysis (Python)...")
+    error_csv_path = out_dir / "miller_rabin_error.csv"
+    if error_csv_path.exists(): error_csv_path.unlink()
+    
+    comp_file = dataset_dir / "composites_small.txt"
+    if comp_file.exists():
+        print(f"  Processing {comp_file.name} for error rates...")
+        for k in [1, 2, 3, 4, 5]:
+            subprocess.run([sys.executable, str(python_script), "--input-file", str(comp_file), "--out-csv", str(error_csv_path), "--k", str(k)], check=True)
+    
+    # --- 3. Witness Analysis (C++, Small Numbers) ---
+    print("Running Witness Analysis (C++)...")
+    witness_csv_path = out_dir / "miller_rabin_witnesses.csv"
+    if witness_csv_path.exists(): witness_csv_path.unlink()
+    
+    if not cpp_binary.exists():
+        print(f"Error: C++ binary not found at {cpp_binary}. Did you run 'make'?")
+    else:
+        small_files = list(dataset_dir.glob("*_small.txt"))
+        for f in small_files:
+            print(f"  Analyzing {f.name}...")
+            subprocess.run([str(cpp_binary), "--input-file", str(f), "--out-csv", str(witness_csv_path), "--mode", "analysis"], check=True)
+            
+        # Post-process witness data to add categories
+        if witness_csv_path.exists():
+            df = pd.read_csv(witness_csv_path)
+            
+            # Create map
+            cat_map = {}
+            
+            # Load Composites first (default)
+            comp_file = dataset_dir / "composites_small.txt"
+            if comp_file.exists():
+                with open(comp_file, 'r') as f:
+                    for line in f:
+                        if line.strip(): cat_map[int(line.strip())] = 'composite'
+            
+            # Load Primes
+            prime_file = dataset_dir / "primes_small.txt"
+            if prime_file.exists():
+                with open(prime_file, 'r') as f:
+                    for line in f:
+                        if line.strip(): cat_map[int(line.strip())] = 'prime'
+                        
+            # Load Carmichael (overwrite composite)
+            carm_file = dataset_dir / "carmichael_small.txt"
+            if carm_file.exists():
+                with open(carm_file, 'r') as f:
+                    for line in f:
+                        if line.strip(): cat_map[int(line.strip())] = 'carmichael'
+            
+            df['category'] = df['n'].map(cat_map)
+            df.to_csv(witness_csv_path, index=False)
+            print(f"  Saved witness analysis to {witness_csv_path}")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset-dir", default="datasets/miller_rabin")
+    parser.add_argument("--out-dir", default="results/miller_rabin")
+    args = parser.parse_args()
+    run_benchmark(args.dataset_dir, args.out_dir)
