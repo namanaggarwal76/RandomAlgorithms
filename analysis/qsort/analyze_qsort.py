@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
-import argparse
-import os
-import math
-import pandas as pd
-import numpy as np
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import seaborn as sns
+"""
+File: analyze_qsort.py
+Description: Comprehensive analysis and visualization for randomized quicksort benchmarks.
+             Generates plots for runtime, comparisons, swaps, recursion depth, and space complexity.
+"""
 
+import argparse      # Used for parsing command-line arguments
+import os            # Used for operating system dependent functionality
+import math          # Used for mathematical operations
+import pandas as pd  # Used for data manipulation and analysis
+import numpy as np   # Used for numerical operations
+import matplotlib    # Used for plotting backend configuration
+matplotlib.use('Agg')  # Use non-interactive backend for server environments
+import matplotlib.pyplot as plt  # Used for creating visualizations
+import seaborn as sns  # Used for statistical data visualization
+
+# Expected CSV header columns from benchmark results
 HEADER = [
     'timestamp_utc_iso','category','input_file','n','seed','rep_id',
     'elapsed_ms','comparisons','swaps','correct','std_sort_ms',
@@ -17,18 +24,39 @@ HEADER = [
 
 
 def ensure_dir(path: str):
+    """
+    Ensures that a directory exists, creating it if necessary.
+    
+    Args:
+        path (str): Directory path to create.
+    """
     os.makedirs(path, exist_ok=True)
 
 
 def load_results(csv_path: str) -> pd.DataFrame:
+    """
+    Loads and preprocesses benchmark results from CSV file.
+    
+    Args:
+        csv_path (str): Path to the results CSV file.
+        
+    Returns:
+        pd.DataFrame: Processed dataframe with correct types and cleaned data.
+        
+    Raises:
+        FileNotFoundError: If CSV file doesn't exist.
+        ValueError: If required columns are missing.
+    """
     if not os.path.isfile(csv_path):
         raise FileNotFoundError(f"Results CSV not found: {csv_path}")
     df = pd.read_csv(csv_path)
+    
+    # Validate required columns
     missing = [c for c in HEADER if c not in df.columns]
     if missing:
         raise ValueError(f"Missing expected columns in results: {missing}")
 
-    # Type conversions
+    # Type conversions for proper data handling
     int_cols = ['n', 'seed', 'rep_id', 'comparisons', 'swaps', 'correct', 'recursion_depth', 'bad_split_count', 'max_stack_depth', 'estimated_stack_bytes']
     float_cols = ['elapsed_ms', 'std_sort_ms']
     for c in int_cols:
@@ -36,36 +64,47 @@ def load_results(csv_path: str) -> pd.DataFrame:
     for c in float_cols:
         df[c] = pd.to_numeric(df[c], errors='coerce')
 
-    # Ensure categories and filenames are strings
+    # Data cleaning and derived columns
     df['category'] = df['category'].astype(str)
     df['filename'] = df['input_file'].apply(lambda p: os.path.basename(str(p)))
-    df = df.dropna(subset=['n','elapsed_ms'])
+    df = df.dropna(subset=['n','elapsed_ms'])  # Remove incomplete records
     df['n'] = df['n'].astype(int)
     df['correct'] = df['correct'].fillna(0).astype(int)
     return df
 
 
 def plot_overall_runtime_scaling(df: pd.DataFrame, out_dir: str):
+    """
+    Plots overall runtime scaling across all data categories.
+    Shows average performance with O(n log n) reference curve.
+    
+    Args:
+        df (pd.DataFrame): Benchmark results dataframe.
+        out_dir (str): Output directory for saving the plot.
+    """
     # Q1: General time complexity graph irrespective of data type
     plt.figure(figsize=(10, 6))
     
     # Plot aggregate mean with error bands
     sns.lineplot(data=df, x='n', y='elapsed_ms', label='Average Performance (All Types)', marker='o', color='b')
     
-    # Fit c * n log n to the overall mean of the largest n
+    # Fit O(n log n) reference curve to empirical data
+    # Calculate constant factor from largest dataset
     max_n = df['n'].max()
     if max_n > 0:
         avg_time_max_n = df[df['n'] == max_n]['elapsed_ms'].mean()
         c = avg_time_max_n / (max_n * np.log2(max_n))
         print(f"Overall fitted constant c: {c:.2e}")
         
+        # Generate reference curves
         x_ref = np.linspace(df['n'].min(), df['n'].max(), 100)
         y_ref = c * x_ref * np.log2(x_ref)
         plt.plot(x_ref, y_ref, 'k--', alpha=0.8, label=f'Reference ~ {c:.1e} n log n')
         
-        # Optional: O(n^2) reference anchored at min_n
+        # Add O(n²) reference for comparison (worst case)
         min_n = df['n'].min()
         if min_n > 1:
+            # Anchor O(n²) curve to start at same point as O(n log n)
             start_y = c * min_n * np.log2(min_n)
             c2 = start_y / (min_n * min_n)
             y_ref2 = c2 * x_ref * x_ref
@@ -86,6 +125,14 @@ def plot_overall_runtime_scaling(df: pd.DataFrame, out_dir: str):
 
 
 def plot_runtime_scaling(df_cat: pd.DataFrame, out_dir: str):
+    """
+    Plots runtime scaling comparison across different data categories.
+    Shows how performance varies with input type (random, sorted, duplicates, etc.).
+    
+    Args:
+        df_cat (pd.DataFrame): Benchmark results dataframe.
+        out_dir (str): Output directory for saving the plot.
+    """
     # Q2: Runtime scaling by category
     # Plot: Line plot – average time_ms vs n
     # Series: one line per input_type (category)
@@ -93,15 +140,14 @@ def plot_runtime_scaling(df_cat: pd.DataFrame, out_dir: str):
     plt.figure(figsize=(10, 6))
     sns.lineplot(data=df_cat, x='n', y='elapsed_ms', hue='category', marker='o')
     
-    # Overlay c * n log n reference
-    # Fit c to the largest n of random category
+    # Overlay theoretical complexity references
+    # Fit constant to random data (expected average case)
     random_data = df_cat[df_cat['category'] == 'random']
     if not random_data.empty:
         max_n = random_data['n'].max()
         avg_time = random_data[random_data['n'] == max_n]['elapsed_ms'].mean()
         if max_n > 0:
-            # Calculate c (constant factor) from the largest random input
-            # c = time / (n * log2(n))
+            # Calculate constant factor: c = time / (n * log₂(n))
             c = avg_time / (max_n * np.log2(max_n))
             print(f"Fitted constant c for O(n log n): {c:.2e} (based on random input size {max_n})")
 
@@ -139,6 +185,14 @@ def plot_runtime_scaling(df_cat: pd.DataFrame, out_dir: str):
 
 
 def plot_comparisons_scaling(df_cat: pd.DataFrame, out_dir: str):
+    """
+    Plots the number of comparisons vs input size across categories.
+    Helps understand algorithmic complexity in terms of comparison operations.
+    
+    Args:
+        df_cat (pd.DataFrame): Benchmark results dataframe.
+        out_dir (str): Output directory for saving the plot.
+    """
     # Q3: Comparisons scaling
     plt.figure(figsize=(10, 6))
     sns.lineplot(data=df_cat, x='n', y='comparisons', hue='category', marker='o')
@@ -154,6 +208,14 @@ def plot_comparisons_scaling(df_cat: pd.DataFrame, out_dir: str):
 
 
 def plot_swaps_scaling(df_cat: pd.DataFrame, out_dir: str):
+    """
+    Plots the number of swaps vs input size across categories.
+    Swaps indicate data movement, useful for cache performance analysis.
+    
+    Args:
+        df_cat (pd.DataFrame): Benchmark results dataframe.
+        out_dir (str): Output directory for saving the plot.
+    """
     # Q4: Swaps scaling
     plt.figure(figsize=(10, 6))
     sns.lineplot(data=df_cat, x='n', y='swaps', hue='category', marker='o')
@@ -169,6 +231,14 @@ def plot_swaps_scaling(df_cat: pd.DataFrame, out_dir: str):
 
 
 def plot_seed_stability(df, out_dir):
+    """
+    Plots variance in performance across different random seeds (fixed input size).
+    Assesses algorithmic stability and randomness impact.
+    
+    Args:
+        df (pd.DataFrame): Benchmark results dataframe.
+        out_dir (str): Output directory for saving plots.
+    """
     # Q5: Seed stability (fixed n)
     # Find the n with the most samples (likely the stability target n=50000)
     n_counts = df['n'].value_counts()
@@ -195,6 +265,14 @@ def plot_seed_stability(df, out_dir):
 
 
 def plot_recursion_depth(df, out_dir):
+    """
+    Plots maximum recursion depth vs input size.
+    Expected to follow O(log n) for balanced partitions.
+    
+    Args:
+        df (pd.DataFrame): Benchmark results dataframe.
+        out_dir (str): Output directory for saving the plot.
+    """
     # Q6: Recursion depth vs n
     if 'recursion_depth' not in df.columns: return
     
@@ -211,6 +289,14 @@ def plot_recursion_depth(df, out_dir):
 
 
 def plot_bad_splits(df, out_dir):
+    """
+    Plots the frequency of unbalanced partitions (>90% on one side).
+    High counts indicate poor pivot selection or adversarial inputs.
+    
+    Args:
+        df (pd.DataFrame): Benchmark results dataframe.
+        out_dir (str): Output directory for saving the plot.
+    """
     # Q7: Pivot split quality
     if 'bad_split_count' not in df.columns: return
     
@@ -227,18 +313,26 @@ def plot_bad_splits(df, out_dir):
 
 
 def plot_stack_depth(df, out_dir):
+    """
+    Plots maximum call stack depth vs input size (space complexity).
+    Expected O(log n) average case, O(n) worst case.
+    
+    Args:
+        df (pd.DataFrame): Benchmark results dataframe.
+        out_dir (str): Output directory for saving the plot.
+    """
     # Q8: Stack depth (space complexity indicator)
     if 'max_stack_depth' not in df.columns: return
     
     plt.figure(figsize=(10, 6))
     sns.lineplot(data=df, x='n', y='max_stack_depth', hue='category', marker='o')
     
-    # Overlay theoretical O(log n) reference
+    # Overlay theoretical complexity references
     if not df.empty:
         max_n = df['n'].max()
         min_n = df['n'].min()
         if max_n > 0:
-            # Fit constant to average case (random data)
+            # Fit O(log n) constant to random data (expected average case)
             random_data = df[df['category'] == 'random']
             if not random_data.empty:
                 avg_depth = random_data[random_data['n'] == max_n]['max_stack_depth'].mean()
@@ -247,10 +341,9 @@ def plot_stack_depth(df, out_dir):
                 y_ref = c * np.log2(x_ref)
                 plt.plot(x_ref, y_ref, 'k--', alpha=0.8, label=f'Expected O(log n) ~ {c:.1f} log₂(n)')
             
-            # Also show worst case O(n) for reference
+            # Show worst case O(n) for comparison
             if min_n > 1:
-                c_worst = min_n / min_n  # Simple linear
-                y_worst = x_ref  # Just n
+                y_worst = x_ref  # Linear: depth = n
                 plt.plot(x_ref, y_worst, 'r:', alpha=0.5, label='Worst case O(n)')
     
     plt.title('Maximum Stack Depth vs Input Size (Space Complexity)')
@@ -263,6 +356,14 @@ def plot_stack_depth(df, out_dir):
 
 
 def plot_stack_memory(df, out_dir):
+    """
+    Plots estimated stack memory usage vs input size.
+    Converts bytes to KB for readability. Expected O(log n) growth.
+    
+    Args:
+        df (pd.DataFrame): Benchmark results dataframe.
+        out_dir (str): Output directory for saving the plot.
+    """
     # Q9: Estimated stack memory usage
     if 'estimated_stack_bytes' not in df.columns: return
     
@@ -296,6 +397,14 @@ def plot_stack_memory(df, out_dir):
 
 
 def plot_space_complexity_comparison(df, out_dir):
+    """
+    Generates comprehensive space complexity comparison plots.
+    Two subplots: stack depth and memory usage with log-scale x-axis.
+    
+    Args:
+        df (pd.DataFrame): Benchmark results dataframe.
+        out_dir (str): Output directory for saving the plot.
+    """
     # Q10: Compare space complexity across categories with log scale
     if 'max_stack_depth' not in df.columns: return
     
@@ -362,9 +471,18 @@ def plot_space_complexity_comparison(df, out_dir):
 
 
 def save_summaries(df: pd.DataFrame, out_dir: str):
+    """
+    Generates and saves statistical summaries for each category.
+    Creates both per-category and aggregate summary CSV files.
+    
+    Args:
+        df (pd.DataFrame): Benchmark results dataframe.
+        out_dir (str): Output directory for saving summaries.
+    """
     ensure_dir(out_dir)
     all_rows = []
     for category, df_cat in df.groupby('category'):
+        # Define aggregation metrics
         agg_dict = {
             'n': ('n', 'median'),
             'median_time': ('elapsed_ms', 'median'),
@@ -403,6 +521,19 @@ def save_summaries(df: pd.DataFrame, out_dir: str):
 
 
 def run():
+    """
+    Main analysis execution function.
+    
+    Workflow:
+      1. Load benchmark results from CSV
+      2. Generate all visualization plots:
+         - Runtime scaling (overall and by category)
+         - Comparisons and swaps analysis
+         - Seed stability assessment
+         - Recursion depth and pivot quality
+         - Space complexity metrics
+      3. Save statistical summaries
+    """
     parser = argparse.ArgumentParser(description='Analyze randomized quicksort results and produce plots.')
     parser.add_argument('--results', default='results/qsort/qsort_master.csv', help='Path to master CSV')
     parser.add_argument('--out-dir', default='results/qsort/analysis_plots', help='Directory to save plots and summaries')
@@ -412,23 +543,30 @@ def run():
         print(f"Error: Results file not found: {args.results}\nPlease run benchmarks first.")
         return
 
+    # Prepare output directory and load data
     ensure_dir(args.out_dir)
     df = load_results(args.results)
     
-    # Run all plots including new space complexity plots
+    # Generate all visualization plots
+    # Time complexity analysis
     plot_overall_runtime_scaling(df, args.out_dir)
     plot_runtime_scaling(df, args.out_dir)
+    
+    # Operation count analysis
     plot_comparisons_scaling(df, args.out_dir)
     plot_swaps_scaling(df, args.out_dir)
+    
+    # Stability and quality metrics
     plot_seed_stability(df, args.out_dir)
     plot_recursion_depth(df, args.out_dir)
     plot_bad_splits(df, args.out_dir)
     
-    # New space complexity plots
+    # Space complexity analysis
     plot_stack_depth(df, args.out_dir)
     plot_stack_memory(df, args.out_dir)
     plot_space_complexity_comparison(df, args.out_dir)
 
+    # Generate statistical summaries
     save_summaries(df, args.out_dir)
     print(f"Analysis complete. Plots and summaries saved to {args.out_dir}")
 
