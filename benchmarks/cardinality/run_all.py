@@ -2,12 +2,18 @@
 """
 Compatibility wrapper that simply invokes the C++ cardinality benchmark binary.
 """
-import argparse
-import subprocess
-from pathlib import Path
+import argparse  # Used for parsing command line arguments
+import subprocess  # Used for running external commands (C++ binary)
+from pathlib import Path  # Used for object-oriented filesystem paths
 
 
 def parse_args() -> argparse.Namespace:
+    """
+    Parses command line arguments.
+
+    Returns:
+        argparse.Namespace: Parsed arguments.
+    """
     parser = argparse.ArgumentParser(description="Wrapper for the C++ cardinality benchmark.")
     parser.add_argument("--dataset-dir", default="datasets/cardinality", help="Folder with *.txt streams.")
     parser.add_argument("--out-dir", default="results/cardinality", help="Directory for CSV outputs.")

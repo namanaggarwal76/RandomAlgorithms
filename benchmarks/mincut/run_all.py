@@ -2,12 +2,18 @@
 """
 Wrapper for the C++ mincut benchmark.
 """
-import argparse
-import subprocess
-from pathlib import Path
-import sys
+import argparse  # Used for parsing command line arguments
+import subprocess  # Used for running external commands (C++ binary, make)
+from pathlib import Path  # Used for object-oriented filesystem paths
+import sys  # Used for system-specific parameters and functions
 
 def parse_args() -> argparse.Namespace:
+    """
+    Parses command line arguments.
+
+    Returns:
+        argparse.Namespace: Parsed arguments.
+    """
     parser = argparse.ArgumentParser(description="Wrapper for the C++ mincut benchmark.")
     parser.add_argument("--dataset-dir", default="datasets/mincut", help="Folder with *.txt graph files.")
     parser.add_argument("--out-dir", default="results/mincut", help="Directory for CSV outputs.")

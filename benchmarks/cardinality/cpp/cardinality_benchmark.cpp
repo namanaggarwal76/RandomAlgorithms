@@ -1,21 +1,24 @@
-#include "cardinality_estimators.hpp"
+#include "cardinality_estimators.hpp" // Include the cardinality estimators header
 
-#include <algorithm>
-#include <chrono>
-#include <cmath>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <unordered_set>
-#include <vector>
-#include <cctype>
+#include <algorithm> // Used for algorithms like sort, max, etc.
+#include <chrono> // Used for timing measurements
+#include <cmath> // Used for mathematical functions like abs, pow
+#include <filesystem> // Used for filesystem operations
+#include <fstream> // Used for file input/output
+#include <iostream> // Used for standard input/output
+#include <memory> // Used for smart pointers
+#include <sstream> // Used for string stream operations
+#include <string> // Used for string manipulation
+#include <unordered_set> // Used for exact cardinality calculation (ground truth)
+#include <vector> // Used for dynamic arrays
+#include <cctype> // Used for character handling
 
 namespace fs = std::filesystem;
 using namespace cardinality;
 
+/**
+ * @brief Structure to hold command line arguments.
+ */
 struct Args {
     fs::path dataset_dir = "datasets/cardinality";
     fs::path out_dir = "results/cardinality";
@@ -23,6 +26,9 @@ struct Args {
     int reps = 3;
 };
 
+/**
+ * @brief Structure to hold a single raw sample point.
+ */
 struct RawSample {
     size_t checkpoint;
     size_t stream_index;
@@ -31,6 +37,9 @@ struct RawSample {
     double relative_error;
 };
 
+/**
+ * @brief Structure to hold the result of an estimator run.
+ */
 struct EstimatorResult {
     std::vector<RawSample> samples;
     double final_estimate = 0.0;
@@ -42,6 +51,13 @@ struct EstimatorResult {
     size_t memory_bytes = 0;
 };
 
+/**
+ * @brief Parses command line arguments.
+ * 
+ * @param argc Number of arguments.
+ * @param argv Array of arguments.
+ * @return Args Parsed arguments.
+ */
 Args parse_args(int argc, char** argv) {
     Args args;
     for (int i = 1; i < argc; ++i) {

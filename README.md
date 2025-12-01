@@ -16,99 +16,29 @@ This project contains implementations and benchmarks for five randomized algorit
 -   `results/`: Output directory for benchmark results and plots.
 -   `bin/`: Compiled C++ binaries.
 
-## User Flow
+## Usage
 
-just do 
-```bash
-./run_all.sh
-```
+To reproduce all results (generate datasets, build binaries, run benchmarks, and generate plots), simply follow these steps:
 
-Follow these steps to reproduce the results.
-
-### 1. Setup & Dependencies
+### 1. Install Dependencies
 
 Install the required Python packages:
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Generate Datasets
+### 2. Run the Pipeline
 
-Generate the datasets required for all benchmarks:
+Execute the master script:
 ```bash
-python datasets/generate_all.py
-```
-This will populate the `datasets/` directory with test files.
-
-### 3. Build C++ Binaries
-
-Compile the C++ implementations:
-```bash
-make
-```
-This creates the executables in the `bin/` directory.
-
-### 4. Run Benchmarks
-
-Run the benchmarks for each algorithm.
-
-**Frievald's Algorithm:**
-```bash
-# Runtime benchmark
-./bin/frievald_benchmark_runtime
-
-# Error probability benchmark
-./bin/frievald_benchmark_error
+./run_all.sh
 ```
 
-**Miller-Rabin:**
-```bash
-python benchmarks/miller_rabin/run_all.py
-```
-
-**Randomized Quicksort:**
-```bash
-python benchmarks/qsort/run_all.py
-```
-
-**Cardinality (LL, HLL, HLL++):**
-```bash
-python benchmarks/cardinality/run_all.py
-```
-
-**MinCut (Karger, Karger-Stein):**
-```bash
-python benchmarks/mincut/run_all.py
-```
-
-### 5. Analyze Results
-
-Generate plots and analysis from the benchmark results.
-
-**Frievald:**
-```bash
-python analysis/frievald/visualize_results.py
-```
-
-**Miller-Rabin:**
-```bash
-python analysis/miller_rabin/analyze_miller_rabin.py
-```
-
-**Randomized Quicksort:**
-```bash
-python analysis/qsort/analyze_qsort.py
-```
-
-**Cardinality (LL, HLL, HLL++):**
-```bash
-python analysis/cardinality/analyze_cardinality.py
-```
-
-**MinCut (Karger, Karger-Stein):**
-```bash
-python analysis/mincut/analyze_mincut.py results/mincut/mincut_results.csv
-```
+This script handles the entire pipeline:
+1.  Generates necessary datasets.
+2.  Compiles C++ implementations.
+3.  Runs benchmarks for all algorithms.
+4.  Analyzes results and generates plots in the `results/` directory.
 
 ## Cleaning Up
 

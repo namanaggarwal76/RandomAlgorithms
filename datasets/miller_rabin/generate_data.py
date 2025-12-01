@@ -1,14 +1,39 @@
 #!/usr/bin/env python3
-import os
-import random
-from sympy import isprime, nextprime
-import math
+"""
+File: generate_data.py
+Description: Generates datasets for testing the Miller-Rabin primality test.
+             Creates files containing small primes, large primes, composites, and Carmichael numbers.
+"""
+
+import os       # Used for file system operations (creating directories, paths).
+import random   # Used for generating random numbers.
+from sympy import isprime, nextprime # Used for ground-truth primality checks.
+import math     # Used for mathematical functions.
 
 def ensure_dir(path):
+    """
+    Ensures that a directory exists.
+    
+    Args:
+        path (str): The directory path.
+    """
     if not os.path.exists(path):
         os.makedirs(path)
 
 def is_carmichael(n):
+    """
+    Checks if a number is a Carmichael number.
+    
+    A Carmichael number is a composite number n such that b^(n-1) = 1 (mod n)
+    for all integers b coprime to n.
+    Uses Korselt's criterion: n is square-free and for all prime factors p of n, p-1 divides n-1.
+    
+    Args:
+        n (int): The number to check.
+        
+    Returns:
+        bool: True if n is a Carmichael number, False otherwise.
+    """
     if isprime(n) or n < 2:
         return False
     
@@ -37,6 +62,12 @@ def is_carmichael(n):
     return True
 
 def generate_datasets(out_dir):
+    """
+    Generates various datasets for Miller-Rabin testing.
+    
+    Args:
+        out_dir (str): The output directory for the datasets.
+    """
     ensure_dir(out_dir)
     
     print("Generating Miller-Rabin datasets...")

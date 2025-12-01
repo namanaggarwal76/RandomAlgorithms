@@ -1,23 +1,47 @@
-#include <iostream>
-#include <vector>
-#include <string>
-#include <random>
-#include <fstream>
-#include <chrono>
-#include <iomanip>
-#include <algorithm>
+/**
+ * @file miller_rabin.cpp
+ * @brief Implementation of the Miller-Rabin primality test in C++.
+ */
+
+#include <iostream>     // Used for standard I/O operations.
+#include <vector>       // Used for storing lists of numbers (if needed).
+#include <string>       // Used for string manipulation.
+#include <random>       // Used for random number generation (std::mt19937_64).
+#include <fstream>      // Used for file I/O.
+#include <chrono>       // Used for high-resolution timing.
+#include <iomanip>      // Used for formatting output (std::setprecision).
+#include <algorithm>    // Used for standard algorithms.
 
 using namespace std;
 
 // Use __int128 for safe modular multiplication of 64-bit numbers
+// This prevents overflow when multiplying two 64-bit integers before modulo.
 typedef __int128_t int128;
 
-// Modular multiplication: (a * b) % n
+/**
+ * @brief Performs modular multiplication (a * b) % n safely.
+ * 
+ * Uses 128-bit integers to prevent overflow during the multiplication of two 64-bit numbers.
+ * 
+ * @param a First operand.
+ * @param b Second operand.
+ * @param n Modulus.
+ * @return uint64_t Result of (a * b) % n.
+ */
 uint64_t mul_mod(uint64_t a, uint64_t b, uint64_t n) {
     return (uint64_t)((int128)a * b % n);
 }
 
-// Modular exponentiation: (base^exp) % n
+/**
+ * @brief Performs modular exponentiation (base^exp) % n.
+ * 
+ * Uses the method of repeated squaring (binary exponentiation) for O(log exp) complexity.
+ * 
+ * @param base The base.
+ * @param exp The exponent.
+ * @param n The modulus.
+ * @return uint64_t Result of (base^exp) % n.
+ */
 uint64_t power(uint64_t base, uint64_t exp, uint64_t n) {
     uint64_t res = 1;
     base %= n;
@@ -29,8 +53,17 @@ uint64_t power(uint64_t base, uint64_t exp, uint64_t n) {
     return res;
 }
 
-// Miller-Rabin Primality Test
-// Returns true if n is probably prime, false if composite
+/**
+ * @brief Miller-Rabin Primality Test.
+ * 
+ * Probabilistically checks if a number n is prime.
+ * 
+ * @param n The number to test.
+ * @param k The number of iterations (witnesses) to check.
+ * @param rng Random number generator engine.
+ * @return true If n is likely prime.
+ * @return false If n is definitely composite.
+ */
 bool miller_rabin(uint64_t n, int k, mt19937_64& rng) {
     if (n < 2) return false;
     if (n == 2 || n == 3) return true;
@@ -67,9 +100,16 @@ bool miller_rabin(uint64_t n, int k, mt19937_64& rng) {
 
 
 
-// Count witnesses and liars for n
-// Returns pair {witnesses, liars}
-// Iterates all bases a in [2, n-2]
+/**
+ * @brief Counts witnesses and liars for a composite number n.
+ * 
+ * Iterates through all possible bases a in [2, n-2].
+ * A "witness" is a base that reveals n is composite.
+ * A "liar" is a base that falsely suggests n might be prime.
+ * 
+ * @param n The composite number to analyze.
+ * @return pair<uint64_t, uint64_t> Pair of {witnesses, liars}.
+ */
 pair<uint64_t, uint64_t> count_witnesses_all(uint64_t n) {
     if (n < 4) return {0, 0}; // 2 and 3 are prime, loop won't run
 

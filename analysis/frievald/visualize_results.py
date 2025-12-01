@@ -1,15 +1,30 @@
 #!/usr/bin/env python3
-import argparse
-import os
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-import numpy as np
+import argparse  # Used for parsing command line arguments
+import os  # Used for operating system dependent functionality
+import pandas as pd  # Used for data manipulation and analysis
+import seaborn as sns  # Used for statistical data visualization
+import matplotlib.pyplot as plt  # Used for creating static, animated, and interactive visualizations
+import numpy as np  # Used for numerical operations
 
 def ensure_dir(path):
+    """
+    Ensures that a directory exists.
+    
+    Args:
+        path (str): Path to the directory.
+    """
     os.makedirs(path, exist_ok=True)
 
 def load_runtime_results(csv_path):
+    """
+    Loads runtime benchmark results from a CSV file.
+    
+    Args:
+        csv_path (str): Path to the CSV file.
+        
+    Returns:
+        pd.DataFrame: DataFrame containing the results.
+    """
     if not os.path.exists(csv_path):
         print(f"Warning: Runtime results not found at {csv_path}")
         return pd.DataFrame()
@@ -19,12 +34,28 @@ def load_runtime_results(csv_path):
     return df
 
 def load_error_results(csv_path):
+    """
+    Loads error benchmark results from a CSV file.
+    
+    Args:
+        csv_path (str): Path to the CSV file.
+        
+    Returns:
+        pd.DataFrame: DataFrame containing the results.
+    """
     if not os.path.exists(csv_path):
         print(f"Warning: Error results not found at {csv_path}")
         return pd.DataFrame()
     return pd.read_csv(csv_path)
 
 def plot_runtime_scaling(df, out_dir):
+    """
+    Plots runtime scaling (Time vs n).
+    
+    Args:
+        df (pd.DataFrame): DataFrame containing the results.
+        out_dir (str): Output directory for the plot.
+    """
     # F1: Time vs n (Frievald vs Naive)
     if df.empty: return
     

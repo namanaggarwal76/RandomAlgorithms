@@ -61,7 +61,7 @@ The algorithm succeeds if it never contracts an edge belonging to $C$.
     $$ \Pr(\text{success}) \ge \frac{2}{n(n-1)} = \binom{n}{2}^{-1} $$
 
 **Complexity Note:**
-A single run of Karger's algorithm takes $O(n^2)$ time (or $O(E)$ with optimized data structures). However, to achieve a high success probability (e.g., $1 - 1/n$), it must be repeated $\Omega(n^2 \log n)$ times, leading to a total runtime of $O(n^4 \log n)$. This inefficiency motivates the Karger-Stein optimization.
+A single run of Karger's algorithm takes $O(V^2)$ time. However, to achieve a high success probability (e.g., $1 - 1/n$), it must be repeated $\Omega(n^2 \log n)$ times, leading to a total runtime of $O(n^4 \log n)$. This inefficiency motivates the Karger-Stein optimization.
 
 ### 2.3 Karger-Stein Recursive Algorithm
 
@@ -123,7 +123,7 @@ $$ T(n) = \sum_{i=0}^{D} W_i = \sum_{i=0}^{2 \log n} c n^2 = c n^2 (2 \log n) = 
 We utilize an **Edge List** representation combined with a **Disjoint Set Union (DSU)** data structure.
 *   **Contraction:** To contract edge $(u, v)$, we `unite(u, v)` in the DSU.
 *   **Edge Management:** We use a "swap-and-pop" method to remove edges from the `std::vector` in $O(1)$ time.
-*   **Rebuilding:** After contracting to $t$ vertices, we rebuild the graph by remapping component IDs to $0 \dots t-1$. This costs $O(E)$.
+*   **Rebuilding:** After contracting to $t$ vertices, we rebuild the graph by remapping component IDs to $0 \dots t-1$. This costs $O(E)$ (which is bounded by $O(V^2)$).
 
 ### 3.2 Space Complexity Analysis
 The space complexity is dominated by the storage of the graph.
@@ -133,7 +133,17 @@ The space complexity is dominated by the storage of the graph.
     *   However, since the graph size reduces geometrically ($n, n/\sqrt{2}, n/2 \dots$), the total space used by all active stack frames is bounded by a geometric series summing to $O(V+E)$.
     *   **Total Space:** $O(V + E)$.
 
-### 3.3 Handling Disconnected Graphs
+### 3.3 Complexity Summary
+To clarify the distinction between a single execution and the total work required for high reliability:
+
+| Algorithm | Single Run Complexity | Success Prob. (Single Run) | Repetitions Needed | Total Complexity (High Prob.) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Karger** | $O(V^2)$ | $\Omega(1/V^2)$ | $O(V^2 \log V)$ | $O(V^4 \log V)$ |
+| **Karger-Stein** | $O(V^2 \log V)$ | $\Omega(1/\log V)$ | $O(\log^2 V)$ | $O(V^2 \log^3 V)$ |
+
+*Note: While Karger-Stein's single run is asymptotically slower than Karger's ($V^2 \log V$ vs $V^2$), its much higher success probability means we need drastically fewer repetitions, making it faster overall for reliable results.*
+
+### 3.4 Handling Disconnected Graphs
 A disconnected graph has a min-cut of size 0. Our implementation handles this implicitly:
 *   If the graph is disconnected, the edge list will eventually become empty or edges will only exist within components.
 *   The contraction loop terminates when `active_edges` is empty.
@@ -161,14 +171,16 @@ A disconnected graph has a min-cut of size 0. Our implementation handles this im
 
 ![Runtime Comparison](results/mincut/analysis_plots/runtime_comparison.png)
 
-**Figure 1:** Runtime comparison. Note the logarithmic scale.
+**Figure 1:** Runtime comparison.
 
 | Graph Size (V) | Karger (Single Run) [s] | Karger-Stein [s] | Ratio |
 | :--- | :--- | :--- | :--- |
-| 50 | ~4.5e-6 | ~0.008 | ~1700x |
-| 400 | ~1.3e-4 | ~0.52 | ~4000x |
+| 50 | ~3.5e-6 | ~0.004 | ~1100x |
+| 400 | ~1.3e-4 | ~0.90 | ~7000x |
 
-**Analysis:** Karger-Stein is significantly slower per run ($O(V^2 \log V)$ vs $O(E)$). However, this cost buys reliability.
+**Analysis:** Karger-Stein is significantly slower per run.
+*   **Complexity vs. Constants:** While the asymptotic difference is only logarithmic ($O(V^2 \log V)$ vs $O(V^2)$), the **constant factors** differ by orders of magnitude. Big-O notation captures the growth rate but ignores these constants.
+*   **Implementation Overhead:** Karger's algorithm runs in-place with minimal overhead. In contrast, Karger-Stein explores a recursion tree with $\approx V^2$ nodes. At *each* node, it allocates memory for a new `Graph` object. This memory management overhead (allocating ~250,000 graphs for $V=500$) is the primary cause of the ~1s execution time. This "hidden constant" is the price of the algorithm's high reliability.
 
 ### 5.2 Success Rate and Accuracy
 
@@ -262,11 +274,11 @@ Total time = $O(n^2 \log n) \times O(\log^2 n) = O(n^2 \log^3 n)$.
 This is significantly better than Karger's $O(n^4 \log n)$.
 
 ### A.5 Comparison with Deterministic Algorithms
-| Algorithm | Type | Complexity | Pros | Cons |
-| :--- | :--- | :--- | :--- | :--- |
-| **Karger-Stein** | Randomized | $O(n^2 \log^3 n)$ | Simple, Parallelizable | Probabilistic, Slow constants |
-| **Stoer-Wagner** | Deterministic | $O(VE + n^2 \log n)$ | Exact, Fast for dense | Complex to implement |
-| **Ford-Fulkerson** | Deterministic | $O(k \cdot E)$ | Good for small cuts | Requires $n-1$ runs for global cut |
+| Algorithm | Type | Time Complexity | Space Complexity | Pros | Cons |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Karger-Stein** | Randomized | $O(n^2 \log^3 n)$ | $O(V+E)$ | Simple, Parallelizable | Probabilistic, High constant factors |
+| **Stoer-Wagner** | Deterministic | $O(VE + n^2 \log n)$ | $O(V+E)$ | Exact, Fast for dense | Complex to implement |
+| **Ford-Fulkerson** | Deterministic | $O(k \cdot E)$ | $O(V+E)$ | Good for small cuts | Requires $n-1$ runs for global cut |
 
 Karger-Stein is often preferred for its simplicity and the fact that it finds *all* minimum cuts with high probability, not just one.
 

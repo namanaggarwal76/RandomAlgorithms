@@ -1,16 +1,33 @@
+/**
+ * @file cardinality_estimators.cpp
+ * @brief Implementation of Cardinality Estimation algorithms.
+ */
+
 #include "cardinality_estimators.hpp"
 
-#include <cmath>
-#include <limits>
+#include <cmath>    // Used for mathematical functions (pow, log).
+#include <limits>   // Used for numeric limits (if needed).
 
 namespace cardinality {
 
+/**
+ * @brief Constructs a LogLog estimator.
+ * @param precision Number of bits to use for bucket indexing.
+ */
 LogLog::LogLog(uint32_t precision)
     : precision_(precision),
       m_(1ull << precision),
       mask_((1ull << (64 - precision)) - 1),
       registers_(m_, 0) {}
 
+/**
+ * @brief Adds a value to the LogLog estimator.
+ * 
+ * Hashes the value, determines the bucket index, and updates the register
+ * if the new rank is greater than the current rank.
+ * 
+ * @param value The value to add.
+ */
 void LogLog::add(uint64_t value) {
     uint64_t h = hash64(value);
     uint32_t idx = static_cast<uint32_t>(h >> (64 - precision_));
@@ -21,14 +38,24 @@ void LogLog::add(uint64_t value) {
     }
 }
 
+/**
+ * @brief Estimates the cardinality using the LogLog formula.
+ * 
+ * E = alpha * m * 2^(average_rank)
+ * Includes small range correction.
+ * 
+ * @return double The estimated cardinality.
+ */
 double LogLog::estimate() const {
     double sum = 0.0;
     for (auto r : registers_) {
         sum += r;
     }
     double avg_rank = sum / static_cast<double>(m_);
-    constexpr double alpha = 0.39701;
+    constexpr double alpha = 0.39701; // Constant for LogLog
     double est = alpha * static_cast<double>(m_) * std::pow(2.0, avg_rank);
+    
+    // Small range correction
     size_t zeros = 0;
     for (auto r : registers_) {
         if (r == 0) zeros++;
@@ -43,12 +70,20 @@ size_t LogLog::memory_usage_bytes() const {
     return registers_.size();
 }
 
+/**
+ * @brief Constructs a HyperLogLog estimator.
+ * @param precision Number of bits to use for bucket indexing.
+ */
 HyperLogLog::HyperLogLog(uint32_t precision)
     : precision_(precision),
       m_(1ull << precision),
       mask_((1ull << (64 - precision)) - 1),
       registers_(m_, 0) {}
 
+/**
+ * @brief Adds a value to the HyperLogLog estimator.
+ * @param value The value to add.
+ */
 void HyperLogLog::add(uint64_t value) {
     uint64_t h = hash64(value);
     uint32_t idx = static_cast<uint32_t>(h >> (64 - precision_));
@@ -59,6 +94,10 @@ void HyperLogLog::add(uint64_t value) {
     }
 }
 
+/**
+ * @brief Computes the alpha constant for HyperLogLog based on m.
+ * @return double The alpha constant.
+ */
 double HyperLogLog::alpha() const {
     switch (m_) {
         case 16: return 0.673;
@@ -69,6 +108,10 @@ double HyperLogLog::alpha() const {
     }
 }
 
+/**
+ * @brief Computes the raw HyperLogLog estimate (harmonic mean).
+ * @return double The raw estimate.
+ */
 double HyperLogLog::raw_estimate() const {
     double denominator = 0.0;
     for (auto r : registers_) {
@@ -77,15 +120,24 @@ double HyperLogLog::raw_estimate() const {
     return alpha() * (static_cast<double>(m_) * static_cast<double>(m_)) / denominator;
 }
 
+/**
+ * @brief Estimates the cardinality using the HyperLogLog formula.
+ * 
+ * Includes corrections for small and large ranges.
+ * 
+ * @return double The estimated cardinality.
+ */
 double HyperLogLog::estimate() const {
     double raw = raw_estimate();
     size_t zeros = 0;
     for (auto r : registers_) {
         if (r == 0) zeros++;
     }
+    // Small range correction
     if (raw <= 5 * static_cast<double>(m_) / 2.0 && zeros) {
         return m_ * std::log(static_cast<double>(m_) / zeros);
     }
+    // Large range correction (for 32-bit hashes, though we use 64-bit here, logic remains similar)
     if (raw > (static_cast<double>(1ull << 32)) / 30.0) {
         return -(1ull << 32) * std::log(1.0 - raw / (1ull << 32));
     }

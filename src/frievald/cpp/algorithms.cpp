@@ -1,13 +1,23 @@
+/**
+ * @file algorithms.cpp
+ * @brief Implementation of Matrix Multiplication and Verification algorithms.
+ */
+
 #include "algorithms.hpp"
-#include <cmath>
-#include <algorithm>
-#include <iostream>
+#include <cmath>        // Used for mathematical functions.
+#include <algorithm>    // Used for std::max, std::min.
+#include <iostream>     // Used for I/O.
 
 using namespace std;
 
 // --- Helper Functions ---
 
-// Add two matrices
+/**
+ * @brief Adds two matrices element-wise.
+ * @param A First matrix.
+ * @param B Second matrix.
+ * @return Matrix Result of A + B.
+ */
 Matrix add(const Matrix& A, const Matrix& B) {
     size_t n = A.rows();
     size_t m = A.cols();
@@ -18,7 +28,12 @@ Matrix add(const Matrix& A, const Matrix& B) {
     return C;
 }
 
-// Subtract two matrices
+/**
+ * @brief Subtracts matrix B from A element-wise.
+ * @param A First matrix.
+ * @param B Second matrix.
+ * @return Matrix Result of A - B.
+ */
 Matrix sub(const Matrix& A, const Matrix& B) {
     size_t n = A.rows();
     size_t m = A.cols();
@@ -29,14 +44,24 @@ Matrix sub(const Matrix& A, const Matrix& B) {
     return C;
 }
 
-// Get next power of 2
+/**
+ * @brief Finds the next power of 2 greater than or equal to n.
+ * Used for padding matrices in Strassen's algorithm.
+ * @param n Input number.
+ * @return size_t Next power of 2.
+ */
 size_t next_power_of_2(size_t n) {
     size_t p = 1;
     while (p < n) p <<= 1;
     return p;
 }
 
-// Pad matrix to size new_n x new_n
+/**
+ * @brief Pads a matrix with zeros to size new_n x new_n.
+ * @param A Input matrix.
+ * @param new_n New dimension.
+ * @return Matrix Padded matrix.
+ */
 Matrix pad_matrix(const Matrix& A, size_t new_n) {
     size_t n = A.rows();
     Matrix P(new_n, new_n); // Initialized to 0
@@ -48,7 +73,12 @@ Matrix pad_matrix(const Matrix& A, size_t new_n) {
     return P;
 }
 
-// Unpad matrix to original size
+/**
+ * @brief Removes padding from a matrix, restoring it to size n x n.
+ * @param P Padded matrix.
+ * @param n Original dimension.
+ * @return Matrix Unpadded matrix.
+ */
 Matrix unpad_matrix(const Matrix& P, size_t n) {
     Matrix A(n, n);
     for (size_t i = 0; i < n; ++i) {
@@ -70,11 +100,7 @@ Matrix matmul_triple_loop(const Matrix& A, const Matrix& B) {
     // Result is n x p
     Matrix C(n, p);
 
-    // Simple cache-friendly optimization: transpose B? 
-    // For strict "triple loop" definition we usually just do ijk.
-    // But to be "considerably faster" than Python, even naive C++ is enough.
-    // Let's stick to standard ijk for correctness and simplicity first.
-    
+    // Standard ikj loop ordering for better cache locality than ijk
     for (size_t i = 0; i < n; ++i) {
         for (size_t k = 0; k < m; ++k) {
             double r = A(i, k);
@@ -88,6 +114,13 @@ Matrix matmul_triple_loop(const Matrix& A, const Matrix& B) {
 
 // --- Strassen ---
 
+/**
+ * @brief Recursive helper for Strassen's algorithm.
+ * @param A First matrix (must be square and power of 2 size).
+ * @param B Second matrix (must be square and power of 2 size).
+ * @param threshold Recursion base case size.
+ * @return Matrix Product matrix.
+ */
 Matrix strassen_recursive(const Matrix& A, const Matrix& B, int threshold) {
     size_t n = A.rows();
 

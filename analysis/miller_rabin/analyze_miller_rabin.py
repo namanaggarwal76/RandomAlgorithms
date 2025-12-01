@@ -1,21 +1,44 @@
 #!/usr/bin/env python3
-import argparse
-import os
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-import numpy as np
+import argparse  # Used for parsing command line arguments
+import os  # Used for operating system dependent functionality
+import pandas as pd  # Used for data manipulation and analysis
+import seaborn as sns  # Used for statistical data visualization
+import matplotlib.pyplot as plt  # Used for creating static, animated, and interactive visualizations
+import numpy as np  # Used for numerical operations
 
 def ensure_dir(path):
+    """
+    Ensures that a directory exists.
+    
+    Args:
+        path (str): Path to the directory.
+    """
     os.makedirs(path, exist_ok=True)
 
 def load_results(summary_csv, raw_csv):
+    """
+    Loads benchmark results from CSV files.
+    
+    Args:
+        summary_csv (str): Path to the summary CSV file.
+        raw_csv (str): Path to the raw CSV file.
+        
+    Returns:
+        tuple: A tuple containing the summary DataFrame and the raw DataFrame.
+    """
     if not os.path.exists(summary_csv) or not os.path.exists(raw_csv):
         print(f"Warning: Results not found.")
         return pd.DataFrame(), pd.DataFrame()
     return pd.read_csv(summary_csv), pd.read_csv(raw_csv)
 
 def plot_time_vs_bits(summary_df, outdir):
+    """
+    Plots execution time vs bit length.
+    
+    Args:
+        summary_df (pd.DataFrame): Summary DataFrame.
+        outdir (str): Output directory for the plot.
+    """
     # M1: Time vs bits (Scaling)
     if summary_df.empty: return
     
@@ -32,6 +55,13 @@ def plot_time_vs_bits(summary_df, outdir):
     plt.close()
 
 def plot_modexp_vs_bits(summary_df, outdir):
+    """
+    Plots modular exponentiation count vs bit length.
+    
+    Args:
+        summary_df (pd.DataFrame): Summary DataFrame.
+        outdir (str): Output directory for the plot.
+    """
     # M2: Modexp count vs bits
     if summary_df.empty: return
     if 'avg_modexp' not in summary_df.columns: return

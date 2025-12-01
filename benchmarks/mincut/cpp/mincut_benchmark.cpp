@@ -1,17 +1,20 @@
-#include "mincut.hpp"
+#include "mincut.hpp" // Include the mincut algorithm header
 
-#include <algorithm>
-#include <chrono>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <random>
-#include <string>
-#include <vector>
-#include <map>
+#include <algorithm> // Used for algorithms like sort, min, etc.
+#include <chrono> // Used for timing measurements
+#include <filesystem> // Used for filesystem operations
+#include <fstream> // Used for file input/output
+#include <iostream> // Used for standard input/output
+#include <random> // Used for random number generation
+#include <string> // Used for string manipulation
+#include <vector> // Used for dynamic arrays
+#include <map> // Used for key-value storage
 
 namespace fs = std::filesystem;
 
+/**
+ * @brief Structure to hold benchmark results.
+ */
 struct Result {
     std::string algorithm;
     std::string dataset;
@@ -21,6 +24,12 @@ struct Result {
     double duration_sec;
 };
 
+/**
+ * @brief Writes benchmark results to a CSV file.
+ * 
+ * @param out_path Path to the output CSV file.
+ * @param results Vector of benchmark results.
+ */
 void write_results(const std::string& out_path, const std::vector<Result>& results) {
     std::ofstream f(out_path);
     f << "algorithm,dataset,vertices,edges,cut_size,duration_sec\n";

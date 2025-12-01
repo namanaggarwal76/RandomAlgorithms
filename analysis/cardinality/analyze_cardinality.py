@@ -10,22 +10,38 @@ Artifacts:
 """
 from __future__ import annotations
 
-import argparse
-from pathlib import Path
+import argparse  # Used for parsing command line arguments
+from pathlib import Path  # Used for object-oriented filesystem paths
 
-import matplotlib
+import matplotlib  # Used for creating static, animated, and interactive visualizations
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
+import matplotlib.pyplot as plt  # Used for plotting
+import pandas as pd  # Used for data manipulation and analysis
+import seaborn as sns  # Used for statistical data visualization
 
 
 def ensure_dir(path: Path) -> None:
+    """
+    Ensures that a directory exists.
+    
+    Args:
+        path (Path): Path to the directory.
+    """
     path.mkdir(parents=True, exist_ok=True)
 
 
 def load_data(raw_path: Path, summary_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Loads benchmark results from CSV files.
+    
+    Args:
+        raw_path (Path): Path to the raw CSV file.
+        summary_path (Path): Path to the summary CSV file.
+        
+    Returns:
+        tuple: A tuple containing the raw DataFrame and the summary DataFrame.
+    """
     if not raw_path.exists() or not summary_path.exists():
         raise FileNotFoundError("Missing raw or summary CSV. Run the benchmarks first.")
     raw = pd.read_csv(raw_path)
@@ -34,6 +50,16 @@ def load_data(raw_path: Path, summary_path: Path) -> tuple[pd.DataFrame, pd.Data
 
 
 def plot_metric(summary: pd.DataFrame, metric: str, title: str, filename: Path, logy: bool = False) -> None:
+    """
+    Plots a specific metric.
+    
+    Args:
+        summary (pd.DataFrame): Summary DataFrame.
+        metric (str): Metric to plot.
+        title (str): Title of the plot.
+        filename (Path): Output filename.
+        logy (bool): Whether to use logarithmic scale for y-axis.
+    """
     plt.figure(figsize=(10, 6))
     display_df = summary.copy()
     display_df["dataset_label"] = display_df["distribution"].str.replace("_", " ").str.title()

@@ -1,20 +1,30 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-from pathlib import Path
-import sys
+import pandas as pd  # Used for data manipulation and analysis
+import matplotlib.pyplot as plt  # Used for creating static, animated, and interactive visualizations
+import seaborn as sns  # Used for statistical data visualization
+from pathlib import Path  # Used for object-oriented filesystem paths
+import sys  # Used for system-specific parameters and functions
 
 def analyze_results(results_file: str, output_dir: str):
+    """
+    Analyzes mincut benchmark results and generates plots.
+    
+    Args:
+        results_file (str): Path to the results CSV file.
+        output_dir (str): Directory to save the plots.
+    """
     df = pd.read_csv(results_file)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
+    # Convert seconds to milliseconds
+    df['duration_ms'] = df['duration_sec'] * 1000
+
     # 1. Runtime Comparison
     plt.figure(figsize=(10, 6))
-    sns.lineplot(data=df, x='vertices', y='duration_sec', hue='algorithm', marker='o')
+    sns.lineplot(data=df, x='vertices', y='duration_ms', hue='algorithm', marker='o')
     plt.title('Runtime: Karger vs Karger-Stein')
     plt.xlabel('Number of Vertices')
-    plt.ylabel('Time (seconds)')
+    plt.ylabel('Time (ms)')
     plt.grid(True)
     plt.savefig(output_path / 'runtime_comparison.png')
     plt.close()

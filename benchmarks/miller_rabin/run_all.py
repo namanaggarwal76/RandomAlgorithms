@@ -1,12 +1,19 @@
-import argparse
-import subprocess
-import os
-from pathlib import Path
-import pandas as pd
-from sympy import isprime
-import sys
+import argparse  # Used for parsing command line arguments
+import subprocess  # Used for running external commands (Python script, C++ binary)
+import os  # Used for operating system dependent functionality
+from pathlib import Path  # Used for object-oriented filesystem paths
+import pandas as pd  # Used for data manipulation and analysis
+from sympy import isprime  # Used for checking primality (ground truth)
+import sys  # Used for system-specific parameters and functions
 
 def run_benchmark(dataset_dir, out_dir):
+    """
+    Runs the Miller-Rabin benchmark suite.
+    
+    Args:
+        dataset_dir (str): Directory containing dataset files.
+        out_dir (str): Directory to save benchmark results.
+    """
     dataset_dir = Path(dataset_dir)
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -40,8 +47,8 @@ def run_benchmark(dataset_dir, out_dir):
         
         # Summary
         summary_csv = out_dir / "miller_rabin_summary.csv"
-        summary = df.groupby(['bits', 'k'])['time_ms'].mean().reset_index()
-        summary.rename(columns={'time_ms': 'avg_time_ms', 'k': 'rounds'}, inplace=True)
+        summary = df.groupby(['bits', 'k'])[['time_ms', 'modexp_count']].mean().reset_index()
+        summary.rename(columns={'time_ms': 'avg_time_ms', 'modexp_count': 'avg_modexp', 'k': 'rounds'}, inplace=True)
         summary.to_csv(summary_csv, index=False)
         print(f"  Saved performance results to {perf_csv_path}")
         temp_perf_csv.unlink()

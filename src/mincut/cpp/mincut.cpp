@@ -1,26 +1,54 @@
+/**
+ * @file mincut.cpp
+ * @brief Implementation of Karger's and Karger-Stein Minimum Cut algorithms.
+ */
+
 #include "mincut.hpp"
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <unordered_map>
-#include <algorithm>
-#include <cmath>
-#include <numeric>
+#include <fstream>      // Used for file input operations (reading graph files).
+#include <iostream>     // Used for standard I/O (debugging, error messages).
+#include <sstream>      // Used for parsing lines from input files.
+#include <unordered_map>// Used for mapping arbitrary vertex IDs to contiguous 0..V-1 IDs.
+#include <algorithm>    // Used for std::min, std::iota.
+#include <cmath>        // Used for std::ceil, std::sqrt.
+#include <numeric>      // Used for std::iota (filling DSU parent array).
 
+/**
+ * @brief Disjoint Set Union (DSU) data structure.
+ * 
+ * Used to efficiently manage connected components during edge contraction.
+ * Supports union-find operations with path compression.
+ */
 struct DSU {
-    std::vector<int> parent;
-    int components;
+    std::vector<int> parent; /**< Stores the parent of each node. parent[i] == i means i is a root. */
+    int components;          /**< Tracks the number of active components (vertices) remaining. */
 
+    /**
+     * @brief Constructs a DSU with n elements.
+     * @param n Number of elements.
+     */
     DSU(int n) : parent(n), components(n) {
-        std::iota(parent.begin(), parent.end(), 0);
+        std::iota(parent.begin(), parent.end(), 0); // Initialize parent[i] = i
     }
 
+    /**
+     * @brief Finds the representative (root) of the set containing i.
+     * Applies path compression.
+     * @param i Element to find.
+     * @return int Root of the set.
+     */
     int find(int i) {
         if (parent[i] == i)
             return i;
         return parent[i] = find(parent[i]);
     }
 
+    /**
+     * @brief Unites the sets containing i and j.
+     * @param i First element.
+     * @param j Second element.
+     * @return true If i and j were in different sets and are now merged.
+     * @return false If i and j were already in the same set.
+     */
     bool unite(int i, int j) {
         int root_i = find(i);
         int root_j = find(j);
@@ -65,7 +93,18 @@ Graph load_graph(const std::string& filename) {
     return g;
 }
 
-// Helper to contract graph g down to k vertices
+/**
+ * @brief Contracts the graph g down to k vertices.
+ * 
+ * This is a helper function used by both Karger and Karger-Stein.
+ * It randomly selects edges and contracts them (merges endpoints) using DSU
+ * until the number of components equals k.
+ * 
+ * @param g The input graph.
+ * @param k The target number of vertices.
+ * @param rng Random number generator.
+ * @return Graph A new graph with k vertices and preserved edges (excluding self-loops).
+ */
 Graph contract(const Graph& g, int k, std::mt19937& rng) {
     if (g.V <= k) return g;
 
@@ -103,21 +142,13 @@ Graph contract(const Graph& g, int k, std::mt19937& rng) {
     
     // Construct new graph
     // Map old components to new vertex IDs 0..k-1
-    std::unordered_map<int, int> component_map;
+    std::vector<int> component_map(g.V, -1);
     int new_id_counter = 0;
     
     Graph new_g;
     new_g.V = current_vertices;
     
-    // We iterate over ORIGINAL edges (or remaining active ones? No, all edges that are not self-loops in the new contraction)
-    // The 'active_edges' list only lost the edges we *processed*. 
-    // But edges we didn't process might now be self-loops.
-    // Also edges we processed and were self-loops were removed.
-    // Edges we processed and caused contraction are now self-loops in the new graph? 
-    // No, they are internal to the merged vertex.
-    
-    // Correct approach:
-    // Iterate over ALL edges of the input graph 'g'.
+    // We iterate over ALL edges of the input graph 'g'.
     // Find new endpoints using DSU.
     // If new_u != new_v, add to new graph.
     
@@ -126,8 +157,8 @@ Graph contract(const Graph& g, int k, std::mt19937& rng) {
         int root_v = dsu.find(e.v);
         
         if (root_u != root_v) {
-            if (component_map.find(root_u) == component_map.end()) component_map[root_u] = new_id_counter++;
-            if (component_map.find(root_v) == component_map.end()) component_map[root_v] = new_id_counter++;
+            if (component_map[root_u] == -1) component_map[root_u] = new_id_counter++;
+            if (component_map[root_v] == -1) component_map[root_v] = new_id_counter++;
             
             new_g.edges.push_back({component_map[root_u], component_map[root_v]});
         }
@@ -136,12 +167,12 @@ Graph contract(const Graph& g, int k, std::mt19937& rng) {
     return new_g;
 }
 
-int kargerMinCut(Graph g, std::mt19937& rng) {
+int kargerMinCut(const Graph& g, std::mt19937& rng) {
     Graph contracted = contract(g, 2, rng);
     return contracted.E;
 }
 
-int kargerSteinMinCut(Graph g, std::mt19937& rng) {
+int kargerSteinMinCut(const Graph& g, std::mt19937& rng) {
     if (g.V <= 6) {
         return kargerMinCut(g, rng);
     }

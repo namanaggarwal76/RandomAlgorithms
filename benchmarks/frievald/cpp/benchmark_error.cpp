@@ -1,11 +1,11 @@
-#include "algorithms.hpp"
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <random>
-#include <string>
-#include <cstring>
-#include <filesystem>
+#include "algorithms.hpp" // Include the Frievald algorithm header
+#include <iostream> // Used for standard input/output
+#include <fstream> // Used for file input/output
+#include <vector> // Used for dynamic arrays
+#include <random> // Used for random number generation
+#include <string> // Used for string manipulation
+#include <cstring> // Used for C-style string manipulation
+#include <filesystem> // Used for filesystem operations
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -15,6 +15,13 @@ const int N = 500; // Fixed size for error benchmark
 const vector<int> K_VALUES = {1, 2, 5, 10, 20};
 const vector<string> ERROR_MODES = {"random_element"}; // Focus on one mode or multiple? Prompt says "incorrect C'".
 
+/**
+ * @brief Main function for the Frievald error benchmark.
+ * 
+ * @param argc Number of arguments.
+ * @param argv Array of arguments.
+ * @return int Exit code.
+ */
 int main(int argc, char* argv[]) {
     string out_csv = "results/frievald/error.csv";
     bool append_mode = false;

@@ -1,12 +1,41 @@
-import random
-import sys
-import time
-import argparse
+"""
+File: miller_rabin.py
+Description: Implementation of the Miller-Rabin primality test.
+"""
+
+import random   # Used for generating random bases 'a' for the primality test.
+import sys      # Used for system-specific parameters and functions (if needed).
+import time     # Used for measuring execution time (if needed).
+import argparse # Used for parsing command-line arguments.
 
 def power(base, exp, mod):
+    """
+    Computes (base^exp) % mod using modular exponentiation.
+    
+    Args:
+        base (int): The base.
+        exp (int): The exponent.
+        mod (int): The modulus.
+        
+    Returns:
+        int: The result of (base^exp) % mod.
+    """
     return pow(base, exp, mod)
 
 def miller_rabin(n, k, seed=None):
+    """
+    Performs the Miller-Rabin primality test on integer n.
+    
+    Args:
+        n (int): The number to test for primality.
+        k (int): The number of iterations (witnesses) to check.
+        seed (int, optional): Seed for the random number generator for reproducibility.
+        
+    Returns:
+        tuple: (bool, int)
+            - bool: True if n is likely prime, False if n is composite.
+            - int: The number of modular exponentiations performed (cost metric).
+    """
     if seed is not None:
         random.seed(seed)
         
@@ -14,6 +43,7 @@ def miller_rabin(n, k, seed=None):
     if n == 2 or n == 3: return True, 0
     if n % 2 == 0: return False, 0
 
+    # Write n-1 as 2^r * d
     d = n - 1
     r = 0
     while d % 2 == 0:
@@ -44,10 +74,14 @@ def miller_rabin(n, k, seed=None):
     return True, modexp_count
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input-file", required=True)
-    parser.add_argument("--out-csv", required=True)
-    parser.add_argument("--k", type=int, default=5)
+    """
+    Main function to run the Miller-Rabin test from the command line.
+    Reads numbers from an input file and writes results to a CSV.
+    """
+    parser = argparse.ArgumentParser(description="Run Miller-Rabin Primality Test")
+    parser.add_argument("--input-file", required=True, help="Path to input file containing numbers to test")
+    parser.add_argument("--out-csv", required=True, help="Path to output CSV file")
+    parser.add_argument("--k", type=int, default=5, help="Number of iterations for the test")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 

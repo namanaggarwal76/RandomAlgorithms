@@ -9,6 +9,8 @@ fi
 echo "=== Building C++ Binaries ==="
 make
 
+
+
 echo "=== Generating Datasets ==="
 $PYTHON datasets/generate_all.py
 
@@ -20,6 +22,8 @@ $PYTHON datasets/cardinality/generate_streams.py --out-dir datasets/cardinality
 
 echo "=== Generating MinCut Datasets ==="
 $PYTHON datasets/mincut/generate_graphs.py --out-dir datasets/mincut
+
+
 
 echo "=== Running Quicksort Benchmarks ==="
 $PYTHON benchmarks/qsort/run_all.py
@@ -38,6 +42,8 @@ echo "=== Running Cardinality Benchmarks ==="
 
 echo "=== Running MinCut Benchmarks ==="
 $PYTHON benchmarks/mincut/run_all.py --dataset-dir datasets/mincut --out-dir results/mincut --reps 5
+
+
 
 echo "=== Running Analysis ==="
 # Quicksort

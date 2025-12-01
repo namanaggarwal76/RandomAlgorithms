@@ -1,14 +1,14 @@
-#include "algorithms.hpp"
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <chrono>
-#include <random>
-#include <string>
-#include <iomanip>
-#include <cstring>
-#include <functional>
-#include <filesystem>
+#include "algorithms.hpp" // Include the Frievald algorithm header
+#include <iostream> // Used for standard input/output
+#include <fstream> // Used for file input/output
+#include <vector> // Used for dynamic arrays
+#include <chrono> // Used for timing measurements
+#include <random> // Used for random number generation
+#include <string> // Used for string manipulation
+#include <iomanip> // Used for output formatting
+#include <cstring> // Used for C-style string manipulation
+#include <functional> // Used for function objects
+#include <filesystem> // Used for filesystem operations
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -18,6 +18,12 @@ const int SAMPLES = 10; // Reduced samples per file as we iterate over files
 const int SKIP_NAIVE_ABOVE = 500; // Skip naive O(N^3) for large N
 const vector<int> FRIEVALD_KS = {5}; // Fixed k for scaling experiment
 
+/**
+ * @brief Measures the execution time of a function.
+ * 
+ * @param func The function to measure.
+ * @return double Execution time in seconds.
+ */
 double measure_time(function<void()> func) {
     auto start = chrono::high_resolution_clock::now();
     func();
@@ -26,6 +32,13 @@ double measure_time(function<void()> func) {
     return diff.count();
 }
 
+/**
+ * @brief Reads a matrix from a file.
+ * 
+ * @param file Input file stream.
+ * @param n Dimension of the matrix.
+ * @return Matrix The read matrix.
+ */
 Matrix read_matrix(ifstream& file, int n) {
     Matrix M(n, n);
     for (int i = 0; i < n; ++i) {
