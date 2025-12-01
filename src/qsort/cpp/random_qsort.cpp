@@ -20,6 +20,8 @@ struct Counters {
     unsigned long long swaps = 0;
     int max_recursion_depth = 0;
     int bad_split_count = 0;
+    int max_stack_depth = 0;  // Track maximum call stack depth for space complexity
+    unsigned long long estimated_stack_bytes = 0;  // Estimated stack memory usage
 };
 
 static void swap_if_needed(int &a, int &b, Counters &c) {
@@ -48,6 +50,15 @@ static int partition(vector<int> &arr, int L, int R, mt19937 &rng, Counters &c) 
 
 static void quicksort(vector<int> &arr, int L, int R, mt19937 &rng, Counters &c, int depth) {
     c.max_recursion_depth = max(c.max_recursion_depth, depth);
+    c.max_stack_depth = max(c.max_stack_depth, depth);
+    
+    // Estimate stack memory usage: each recursive call frame uses roughly
+    // 4 bytes (L) + 4 bytes (R) + 8 bytes (counters ptr) + 4 bytes (depth) 
+    // + overhead for rng reference and return address (~32 bytes per frame conservatively)
+    const int BYTES_PER_FRAME = 64;  // Conservative estimate
+    unsigned long long estimated_bytes = static_cast<unsigned long long>(depth + 1) * BYTES_PER_FRAME;
+    c.estimated_stack_bytes = max(c.estimated_stack_bytes, estimated_bytes);
+    
     if (L >= R) return;
     
     int p = partition(arr, L, R, rng, c);
@@ -216,7 +227,7 @@ int main(int argc, char **argv) {
     string category = infer_category_from_path(args.input_file);
     long long n = static_cast<long long>(data.size());
 
-    const string header = "timestamp_utc_iso,category,input_file,n,seed,rep_id,elapsed_ms,comparisons,swaps,correct,std_sort_ms,recursion_depth,bad_split_count";
+    const string header = "timestamp_utc_iso,category,input_file,n,seed,rep_id,elapsed_ms,comparisons,swaps,correct,std_sort_ms,recursion_depth,bad_split_count,max_stack_depth,estimated_stack_bytes";
 
     // Ensure output directory exists (fail with friendly msg if not)
     fs::path out_path(args.out_csv);
@@ -241,7 +252,9 @@ int main(int argc, char **argv) {
         << correct << ","
         << std_sort_ms << ","
         << counters.max_recursion_depth << ","
-        << counters.bad_split_count;
+        << counters.bad_split_count << ","
+        << counters.max_stack_depth << ","
+        << counters.estimated_stack_bytes;
 
     // Append to CSV file
     {

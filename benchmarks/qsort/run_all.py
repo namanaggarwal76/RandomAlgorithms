@@ -6,7 +6,7 @@ import shutil
 import subprocess
 from datetime import datetime
 
-HEADER = "timestamp_utc_iso,category,input_file,n,seed,rep_id,elapsed_ms,comparisons,swaps,correct,std_sort_ms,recursion_depth,bad_split_count"
+HEADER = "timestamp_utc_iso,category,input_file,n,seed,rep_id,elapsed_ms,comparisons,swaps,correct,std_sort_ms,recursion_depth,bad_split_count,max_stack_depth,estimated_stack_bytes"
 
 
 def find_executable(project_root: str) -> str:

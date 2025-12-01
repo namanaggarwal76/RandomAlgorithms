@@ -12,7 +12,7 @@ import seaborn as sns
 HEADER = [
     'timestamp_utc_iso','category','input_file','n','seed','rep_id',
     'elapsed_ms','comparisons','swaps','correct','std_sort_ms',
-    'recursion_depth','bad_split_count'
+    'recursion_depth','bad_split_count','max_stack_depth','estimated_stack_bytes'
 ]
 
 
@@ -29,7 +29,7 @@ def load_results(csv_path: str) -> pd.DataFrame:
         raise ValueError(f"Missing expected columns in results: {missing}")
 
     # Type conversions
-    int_cols = ['n', 'seed', 'rep_id', 'comparisons', 'swaps', 'correct', 'recursion_depth', 'bad_split_count']
+    int_cols = ['n', 'seed', 'rep_id', 'comparisons', 'swaps', 'correct', 'recursion_depth', 'bad_split_count', 'max_stack_depth', 'estimated_stack_bytes']
     float_cols = ['elapsed_ms', 'std_sort_ms']
     for c in int_cols:
         df[c] = pd.to_numeric(df[c], errors='coerce').astype('Int64')
@@ -226,22 +226,173 @@ def plot_bad_splits(df, out_dir):
     plt.close()
 
 
+def plot_stack_depth(df, out_dir):
+    # Q8: Stack depth (space complexity indicator)
+    if 'max_stack_depth' not in df.columns: return
+    
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(data=df, x='n', y='max_stack_depth', hue='category', marker='o')
+    
+    # Overlay theoretical O(log n) reference
+    if not df.empty:
+        max_n = df['n'].max()
+        min_n = df['n'].min()
+        if max_n > 0:
+            # Fit constant to average case (random data)
+            random_data = df[df['category'] == 'random']
+            if not random_data.empty:
+                avg_depth = random_data[random_data['n'] == max_n]['max_stack_depth'].mean()
+                c = avg_depth / np.log2(max_n)
+                x_ref = np.linspace(min_n, max_n, 100)
+                y_ref = c * np.log2(x_ref)
+                plt.plot(x_ref, y_ref, 'k--', alpha=0.8, label=f'Expected O(log n) ~ {c:.1f} log₂(n)')
+            
+            # Also show worst case O(n) for reference
+            if min_n > 1:
+                c_worst = min_n / min_n  # Simple linear
+                y_worst = x_ref  # Just n
+                plt.plot(x_ref, y_worst, 'r:', alpha=0.5, label='Worst case O(n)')
+    
+    plt.title('Maximum Stack Depth vs Input Size (Space Complexity)')
+    plt.xlabel('Input Size (n)')
+    plt.ylabel('Max Stack Depth (recursive calls)')
+    plt.legend()
+    plt.grid(True, which="both", ls="-", alpha=0.2)
+    plt.savefig(os.path.join(out_dir, 'stack_depth.png'), dpi=150)
+    plt.close()
+
+
+def plot_stack_memory(df, out_dir):
+    # Q9: Estimated stack memory usage
+    if 'estimated_stack_bytes' not in df.columns: return
+    
+    plt.figure(figsize=(10, 6))
+    # Convert bytes to KB for better readability
+    df_copy = df.copy()
+    df_copy['stack_kb'] = df_copy['estimated_stack_bytes'] / 1024.0
+    
+    sns.lineplot(data=df_copy, x='n', y='stack_kb', hue='category', marker='o')
+    
+    # Overlay theoretical O(log n) reference for memory
+    if not df_copy.empty:
+        max_n = df_copy['n'].max()
+        min_n = df_copy['n'].min()
+        if max_n > 0:
+            random_data = df_copy[df_copy['category'] == 'random']
+            if not random_data.empty:
+                avg_mem = random_data[random_data['n'] == max_n]['stack_kb'].mean()
+                c = avg_mem / np.log2(max_n)
+                x_ref = np.linspace(min_n, max_n, 100)
+                y_ref = c * np.log2(x_ref)
+                plt.plot(x_ref, y_ref, 'k--', alpha=0.8, label=f'Expected O(log n) ~ {c:.2f} log₂(n) KB')
+    
+    plt.title('Estimated Stack Memory Usage vs Input Size')
+    plt.xlabel('Input Size (n)')
+    plt.ylabel('Stack Memory (KB)')
+    plt.legend()
+    plt.grid(True, which="both", ls="-", alpha=0.2)
+    plt.savefig(os.path.join(out_dir, 'stack_memory.png'), dpi=150)
+    plt.close()
+
+
+def plot_space_complexity_comparison(df, out_dir):
+    # Q10: Compare space complexity across categories with log scale
+    if 'max_stack_depth' not in df.columns: return
+    
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # Plot 1: Stack depth with log scale on x-axis
+    for category in df['category'].unique():
+        cat_data = df[df['category'] == category]
+        agg = cat_data.groupby('n')['max_stack_depth'].mean().reset_index()
+        ax1.plot(agg['n'], agg['max_stack_depth'], marker='o', label=category)
+    
+    if not df.empty:
+        max_n = df['n'].max()
+        min_n = df['n'].min()
+        x_ref = np.linspace(min_n, max_n, 100)
+        
+        # Log n reference
+        random_data = df[df['category'] == 'random']
+        if not random_data.empty and max_n > 0:
+            avg_depth = random_data[random_data['n'] == max_n]['max_stack_depth'].mean()
+            c = avg_depth / np.log2(max_n)
+            y_log = c * np.log2(x_ref)
+            ax1.plot(x_ref, y_log, 'k--', alpha=0.6, label=f'O(log n)')
+        
+        # Linear reference for worst case
+        ax1.plot(x_ref, x_ref / 1000, 'r:', alpha=0.4, label='O(n)/1000')
+    
+    ax1.set_xlabel('Input Size (n)')
+    ax1.set_ylabel('Max Stack Depth')
+    ax1.set_title('Stack Depth: Average Case vs Worst Case')
+    ax1.legend()
+    ax1.grid(True, which="both", ls="-", alpha=0.2)
+    ax1.set_xscale('log')
+    
+    # Plot 2: Memory usage comparison
+    if 'estimated_stack_bytes' in df.columns:
+        for category in df['category'].unique():
+            cat_data = df[df['category'] == category]
+            cat_data = cat_data.copy()
+            cat_data['stack_kb'] = cat_data['estimated_stack_bytes'] / 1024.0
+            agg = cat_data.groupby('n')['stack_kb'].mean().reset_index()
+            ax2.plot(agg['n'], agg['stack_kb'], marker='o', label=category)
+        
+        if not df.empty:
+            random_data = df[df['category'] == 'random']
+            if not random_data.empty and max_n > 0:
+                random_data = random_data.copy()
+                random_data['stack_kb'] = random_data['estimated_stack_bytes'] / 1024.0
+                avg_mem = random_data[random_data['n'] == max_n]['stack_kb'].mean()
+                c = avg_mem / np.log2(max_n)
+                y_log = c * np.log2(x_ref)
+                ax2.plot(x_ref, y_log, 'k--', alpha=0.6, label=f'O(log n)')
+        
+        ax2.set_xlabel('Input Size (n)')
+        ax2.set_ylabel('Stack Memory (KB)')
+        ax2.set_title('Stack Memory Usage Comparison')
+        ax2.legend()
+        ax2.grid(True, which="both", ls="-", alpha=0.2)
+        ax2.set_xscale('log')
+    
+    plt.tight_layout()
+    plt.savefig(os.path.join(out_dir, 'space_complexity_comparison.png'), dpi=150)
+    plt.close()
+
+
 def save_summaries(df: pd.DataFrame, out_dir: str):
     ensure_dir(out_dir)
     all_rows = []
     for category, df_cat in df.groupby('category'):
-        g = df_cat.groupby('filename').agg(
-            n=('n', 'median'),
-            median_time=('elapsed_ms', 'median'),
-            mean_time=('elapsed_ms', 'mean'),
-            std_time=('elapsed_ms', 'std'),
-            median_comparisons=('comparisons', 'median'),
-            median_swaps=('swaps', 'median'),
-            correctness_rate=('correct', 'mean'),
-        ).reset_index()
+        agg_dict = {
+            'n': ('n', 'median'),
+            'median_time': ('elapsed_ms', 'median'),
+            'mean_time': ('elapsed_ms', 'mean'),
+            'std_time': ('elapsed_ms', 'std'),
+            'median_comparisons': ('comparisons', 'median'),
+            'median_swaps': ('swaps', 'median'),
+            'correctness_rate': ('correct', 'mean'),
+        }
+        
+        # Add space complexity metrics if available
+        if 'max_stack_depth' in df_cat.columns:
+            agg_dict['median_stack_depth'] = ('max_stack_depth', 'median')
+            agg_dict['max_stack_depth'] = ('max_stack_depth', 'max')
+        if 'estimated_stack_bytes' in df_cat.columns:
+            agg_dict['median_stack_kb'] = ('estimated_stack_bytes', lambda x: x.median() / 1024.0)
+            agg_dict['max_stack_kb'] = ('estimated_stack_bytes', lambda x: x.max() / 1024.0)
+        
+        g = df_cat.groupby('filename').agg(**agg_dict).reset_index()
         g['category'] = category
+        
         # Order columns
-        g = g[['category','filename','n','median_time','mean_time','std_time','median_comparisons','median_swaps','correctness_rate']]
+        base_cols = ['category','filename','n','median_time','mean_time','std_time','median_comparisons','median_swaps','correctness_rate']
+        space_cols = [c for c in g.columns if 'stack' in c]
+        ordered_cols = base_cols + space_cols
+        ordered_cols = [c for c in ordered_cols if c in g.columns]
+        g = g[ordered_cols]
+        
         out_csv = os.path.join(out_dir, f"{category}_summary.csv")
         g.to_csv(out_csv, index=False)
         all_rows.append(g)
@@ -264,7 +415,7 @@ def run():
     ensure_dir(args.out_dir)
     df = load_results(args.results)
     
-    # Run new plots
+    # Run all plots including new space complexity plots
     plot_overall_runtime_scaling(df, args.out_dir)
     plot_runtime_scaling(df, args.out_dir)
     plot_comparisons_scaling(df, args.out_dir)
@@ -272,6 +423,11 @@ def run():
     plot_seed_stability(df, args.out_dir)
     plot_recursion_depth(df, args.out_dir)
     plot_bad_splits(df, args.out_dir)
+    
+    # New space complexity plots
+    plot_stack_depth(df, args.out_dir)
+    plot_stack_memory(df, args.out_dir)
+    plot_space_complexity_comparison(df, args.out_dir)
 
     save_summaries(df, args.out_dir)
     print(f"Analysis complete. Plots and summaries saved to {args.out_dir}")
