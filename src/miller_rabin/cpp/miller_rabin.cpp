@@ -65,9 +65,50 @@ bool miller_rabin(uint64_t n, int k, mt19937_64& rng) {
     return true;
 }
 
+
+
+// Count witnesses and liars for n
+// Returns pair {witnesses, liars}
+// Iterates all bases a in [2, n-2]
+pair<uint64_t, uint64_t> count_witnesses_all(uint64_t n) {
+    if (n < 4) return {0, 0}; // 2 and 3 are prime, loop won't run
+
+    uint64_t d = n - 1;
+    int r = 0;
+    while (d % 2 == 0) {
+        d /= 2;
+        r++;
+    }
+
+    uint64_t witnesses = 0;
+    uint64_t liars = 0;
+
+    for (uint64_t a = 2; a <= n - 2; ++a) {
+        uint64_t x = power(a, d, n);
+        if (x == 1 || x == n - 1) {
+            liars++;
+            continue;
+        }
+
+        bool composite = true;
+        for (int j = 0; j < r - 1; ++j) {
+            x = mul_mod(x, x, n);
+            if (x == n - 1) {
+                composite = false;
+                break;
+            }
+        }
+        
+        if (composite) witnesses++;
+        else liars++;
+    }
+    return {witnesses, liars};
+}
+
 int main(int argc, char* argv[]) {
     string input_file;
     string out_csv;
+    string mode = "benchmark"; // benchmark, analysis
     int k = 5;
     int seed = 42;
 
@@ -77,10 +118,11 @@ int main(int argc, char* argv[]) {
         else if (arg == "--out-csv" && i + 1 < argc) out_csv = argv[++i];
         else if (arg == "--k" && i + 1 < argc) k = stoi(argv[++i]);
         else if (arg == "--seed" && i + 1 < argc) seed = stoi(argv[++i]);
+        else if (arg == "--mode" && i + 1 < argc) mode = argv[++i];
     }
 
     if (input_file.empty() || out_csv.empty()) {
-        cerr << "Usage: " << argv[0] << " --input-file <file> --out-csv <file> [--k <rounds>] [--seed <seed>]" << endl;
+        cerr << "Usage: " << argv[0] << " --input-file <file> --out-csv <file> [--mode <benchmark|analysis>] [--k <rounds>] [--seed <seed>]" << endl;
         return 1;
     }
 
@@ -93,19 +135,35 @@ int main(int argc, char* argv[]) {
     // Check if CSV exists to write header
     bool file_exists = ifstream(out_csv).good();
     ofstream outfile(out_csv, ios::app);
-    if (!file_exists) {
-        outfile << "n,k,is_probable_prime,time_ns\n";
-    }
+    
+    if (mode == "benchmark") {
+        if (!file_exists) {
+            outfile << "n,k,is_probable_prime,time_ns\n";
+        }
 
-    mt19937_64 rng(seed);
-    uint64_t n;
-    while (infile >> n) {
-        auto start = chrono::high_resolution_clock::now();
-        bool is_prime = miller_rabin(n, k, rng);
-        auto end = chrono::high_resolution_clock::now();
-        auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+        mt19937_64 rng(seed);
+        uint64_t n;
+        while (infile >> n) {
+            auto start = chrono::high_resolution_clock::now();
+            bool is_prime = miller_rabin(n, k, rng);
+            auto end = chrono::high_resolution_clock::now();
+            auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
 
-        outfile << n << "," << k << "," << (is_prime ? 1 : 0) << "," << duration << "\n";
+            outfile << n << "," << k << "," << is_prime << "," << duration << "\n";
+        }
+    } else if (mode == "analysis") {
+        if (!file_exists) {
+            outfile << "n,witnesses,liars,total_bases\n";
+        }
+        
+        uint64_t n;
+        while (infile >> n) {
+            pair<uint64_t, uint64_t> counts = count_witnesses_all(n);
+            outfile << n << "," << counts.first << "," << counts.second << "," << (counts.first + counts.second) << "\n";
+        }
+    } else {
+        cerr << "Unknown mode: " << mode << endl;
+        return 1;
     }
 
     return 0;

@@ -10,9 +10,9 @@ def miller_rabin(n, k, seed=None):
     if seed is not None:
         random.seed(seed)
         
-    if n < 2: return False
-    if n == 2 or n == 3: return True
-    if n % 2 == 0: return False
+    if n < 2: return False, 0
+    if n == 2 or n == 3: return True, 0
+    if n % 2 == 0: return False, 0
 
     d = n - 1
     r = 0

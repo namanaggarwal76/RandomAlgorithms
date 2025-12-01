@@ -12,6 +12,9 @@ make
 echo "=== Generating Datasets ==="
 $PYTHON datasets/generate_all.py
 
+echo "=== Generating Miller-Rabin Datasets ==="
+$PYTHON datasets/miller_rabin/generate_data.py --out-dir datasets/miller_rabin
+
 echo "=== Generating Cardinality Datasets ==="
 $PYTHON datasets/cardinality/generate_streams.py --out-dir datasets/cardinality
 
@@ -44,7 +47,7 @@ $PYTHON analysis/qsort/analyze_qsort.py --results results/qsort/qsort_master.csv
 $PYTHON analysis/frievald/visualize_results.py --runtime-csv results/frievald/runtime.csv --error-csv results/frievald/error.csv --out-dir results/frievald/analysis_plots
 
 # Miller-Rabin
-$PYTHON analysis/miller_rabin/analyze_miller_rabin.py --summary results/miller_rabin/miller_rabin_summary.csv --raw results/miller_rabin/miller_rabin_raw.csv --outdir results/miller_rabin/analysis_plots
+$PYTHON analysis/miller_rabin/analyze_miller_rabin.py --summary results/miller_rabin/miller_rabin_summary.csv --raw results/miller_rabin/miller_rabin_raw.csv --error results/miller_rabin/miller_rabin_error.csv --witnesses results/miller_rabin/miller_rabin_witnesses.csv --outdir results/miller_rabin/analysis_plots
 
 # Cardinality
 $PYTHON analysis/cardinality/analyze_cardinality.py --raw results/cardinality/cardinality_raw.csv --summary results/cardinality/cardinality_summary.csv --out-dir results/cardinality/analysis_plots
