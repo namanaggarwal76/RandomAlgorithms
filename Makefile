@@ -3,20 +3,14 @@ CXXFLAGS = -std=c++17 -Wall -O3
 INCLUDES = -I src/frievald/cpp -I src/cardinality/cpp -I src/mincut/cpp
 
 BIN_DIR = bin
-SRC_FRIEVALD = src/frievald/cpp
-BENCH_FRIEVALD = benchmarks/frievald/cpp
 SRC_QSORT = src/qsort/cpp
 SRC_CARD = src/cardinality/cpp
 SRC_MINCUT = src/mincut/cpp
 
 # Targets
-all: $(BIN_DIR)/frievald_benchmark_runtime $(BIN_DIR)/frievald_benchmark_error $(BIN_DIR)/random_qsort $(BIN_DIR)/miller_rabin $(BIN_DIR)/cardinality_benchmark $(BIN_DIR)/mincut_benchmark
+all: $(BIN_DIR)/random_qsort $(BIN_DIR)/miller_rabin $(BIN_DIR)/cardinality_benchmark $(BIN_DIR)/mincut_benchmark
 
-$(BIN_DIR)/frievald_benchmark_runtime: $(BENCH_FRIEVALD)/benchmark_runtime.cpp $(SRC_FRIEVALD)/algorithms.cpp
-	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^
-
-$(BIN_DIR)/frievald_benchmark_error: $(BENCH_FRIEVALD)/benchmark_error.cpp $(SRC_FRIEVALD)/algorithms.cpp
+$(BIN_DIR)/random_qsort: $(SRC_QSORT)/random_qsort.cpp
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $^
 

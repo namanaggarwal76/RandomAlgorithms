@@ -30,9 +30,9 @@ $PYTHON benchmarks/qsort/run_all.py
 
 echo "=== Running Frievald Benchmarks ==="
 # Runtime benchmark
-./bin/frievald_benchmark_runtime --dataset-dir datasets/frievald --out-csv results/frievald/runtime.csv
+python3 benchmarks/frievald/python/benchmark_runtime.py --append
 # Error benchmark
-./bin/frievald_benchmark_error --out-csv results/frievald/error.csv
+python3 benchmarks/frievald/python/benchmark_error.py 
 
 echo "=== Running Miller-Rabin Benchmarks ==="
 $PYTHON benchmarks/miller_rabin/run_all.py --dataset-dir datasets/miller_rabin --out-dir results/miller_rabin
