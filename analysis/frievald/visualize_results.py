@@ -11,12 +11,12 @@ import pandas as pd
 import seaborn as sns
 import numpy as np
 
-# ensure project root on sys.path for direct script execution
+# Ensure the module works both as part of the package and via `python file.py`.
 PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-# Use absolute paths so scripts run from any working directory
+# Use absolute paths so scripts run from any working directory.
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RESULTS_DIR = REPO_ROOT / "results/frievald"
 RUNTIME_CSV = RESULTS_DIR / "runtime.csv"
@@ -25,6 +25,7 @@ sns.set_theme(style="whitegrid", palette="colorblind", context="talk")
 
 
 def plot_runtime():
+    """Scatter raw runtime samples for each algorithm on log-log axes."""
     if not RUNTIME_CSV.exists():
         raise FileNotFoundError(f"Missing runtime CSV: {RUNTIME_CSV}")
     df = pd.read_csv(RUNTIME_CSV)
@@ -57,6 +58,7 @@ def plot_runtime():
         sub = df[df.algorithm == alg]
         if sub.empty:
             continue
+        # scale seconds to microseconds for easier visual comparison of fast runs
         ax.scatter(sub.n, sub.seconds * 1e6, s=12, alpha=0.7, label=alg, color=alg_color_map[alg])
     # Frievald discrete colors per k
     fr = df[df.algorithm == "frievald"]
@@ -76,6 +78,7 @@ def plot_runtime():
                        label=f"frievald k={k_val}", color=k_colors[k_val])
     ax.set_xscale("log")
     ax.set_yscale("log")
+    # Log axes spread small and large matrices evenly across the plot.
     ax.set_xlabel("Matrix size n")
     ax.set_ylabel("Runtime (microseconds)")
     ax.set_title("Runtime Scatter: Raw Samples")
@@ -92,6 +95,7 @@ def plot_runtime():
 
 
 def plot_runtime_lines():
+    """Plot median binned runtimes to highlight overarching trends."""
     if not RUNTIME_CSV.exists():
         print(f"Missing runtime CSV: {RUNTIME_CSV}")
         return
@@ -100,6 +104,7 @@ def plot_runtime_lines():
     
     # Create a label column to distinguish frievald k values
     def get_label(row):
+        """Return human-readable label combining algorithm and k when relevant."""
         if row['algorithm'] == 'frievald':
             return f"frievald k={int(row['k'])}"
         return row['algorithm']
@@ -142,6 +147,7 @@ def plot_runtime_lines():
     
     ax.set_xscale("log")
     ax.set_yscale("log")
+    # Lines plot the median runtime trend with log scales to emphasize growth rate.
     ax.set_xlabel("Matrix size n")
     ax.set_ylabel("Runtime (microseconds)")
     ax.set_title("Runtime Trends (Binned Medians)")
@@ -160,6 +166,7 @@ def plot_runtime_lines():
 
 
 def plot_error_probability():
+    """Visualize empirical false-positive or survival probabilities versus iterations."""
     if not ERROR_CSV.exists():
         raise FileNotFoundError(f"Missing error CSV: {ERROR_CSV}")
     df = pd.read_csv(ERROR_CSV)
@@ -182,6 +189,7 @@ def plot_error_probability():
             ax.plot(subset["k"], subset["survival_prob"], marker="o", label=f"{label} survival", color=color)
         k_values = np.sort(df["k"].unique())
         ax.plot(k_values, (0.5 ** k_values), marker="^", linestyle="--", color="black", label="Theoretical 2^-k")
+        # Use log scale to highlight the exponential decay predicted by theory.
         ax.set_ylabel("Survival probability")
         ax.set_title("Frievald Detection Survival")
     else:  # fixed_k mode
@@ -213,6 +221,7 @@ def plot_error_probability():
 
 
 def plot_runtime_theory():
+    """Compare measured runtimes with theoretical complexity upper bounds."""
     if not RUNTIME_CSV.exists():
         raise FileNotFoundError(f"Missing runtime CSV: {RUNTIME_CSV}")
 
@@ -228,6 +237,7 @@ def plot_runtime_theory():
         return
 
     def compute_binned_median(data: pd.DataFrame, num_bins: int = 25) -> pd.DataFrame:
+        """Aggregate median runtime within logarithmic bins of matrix size."""
         if data.empty:
             return pd.DataFrame(columns=["n", "microseconds"])
         n_min = data["n"].min()
@@ -254,6 +264,7 @@ def plot_runtime_theory():
         print("Binning produced empty data; skipping theoretical comparison plot.")
         return
 
+    # Upper envelopes to keep theoretical lines above the empirical data.
     triple_constant = (triple_trend["median_microseconds"] / (triple_trend["n"] ** 3)).max()
     frievald_constant = (frievald_trend["median_microseconds"] / (10 * (frievald_trend["n"] ** 2))).max()
 
@@ -296,6 +307,7 @@ def plot_runtime_theory():
 
     ax.set_xscale("log")
     ax.set_yscale("log")
+    # Compare empirical medians to theoretical curves on matching log axes.
     ax.set_xlabel("Matrix size n")
     ax.set_ylabel("Runtime (microseconds)")
     ax.set_title("Measured vs Theoretical Complexity (Upper Bounds)")
@@ -315,6 +327,7 @@ def plot_runtime_theory():
 
 
 def main():
+    """Generate all runtime and error plots from the available benchmark outputs."""
     plot_runtime()
     plot_runtime_lines()
     plot_error_probability()

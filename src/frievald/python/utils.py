@@ -21,6 +21,8 @@ def generate_random_matrix(
     if n <= 0:
         raise ValueError("n must be positive")
     rng = rng or np.random.default_rng()
+    # Treat the generator as a dependency so callers can reproduce experiments.
+    # Draw all entries at once so we benefit from vectorized RNG.
     return rng.uniform(low, high, size=(n, n)).astype(dtype)
 
 
@@ -35,18 +37,22 @@ def inject_error(
     if mode not in {"sparse", "dense", "worst_case"}:
         raise ValueError("mode must be 'sparse', 'dense', or 'worst_case'")
     rng = rng or np.random.default_rng()
+    # Work on a copy to avoid mutating caller-owned arrays in place.
     corrupted = matrix.copy()
     n = matrix.shape[0]
 
     if mode == "sparse":
+        # Flip a single entry by a fixed magnitude to create a minimal error.
         i = rng.integers(0, n)
         j = rng.integers(0, n)
         corrupted[i, j] += magnitude * rng.choice([-1.0, 1.0])
     elif mode == "dense":
+        # Corrupt one row with small random noise across every column.
         row = rng.integers(0, n)
         noise = magnitude * rng.uniform(-1.0, 1.0, size=n)
         corrupted[row, :] += noise
     else:
+        # Classic two-column canceling tweak that survives simple parity checks.
         if n < 2:
             raise ValueError("worst_case mode requires matrices with at least two columns")
         row = rng.integers(0, n)

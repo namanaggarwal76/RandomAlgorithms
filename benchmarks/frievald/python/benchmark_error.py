@@ -19,6 +19,7 @@ import sys
 import numpy as np
 import pandas as pd
 
+# Hoist project src path so the script works when launched from repo root.
 PROJECT_ROOT = Path(__file__).resolve().parents[3] / "src/frievald/python"
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -31,10 +32,12 @@ RESULTS_PATH = RESULTS_DIR / "error.csv"
 
 
 def parse_int_list(csv: str):
+    """Convert a comma-separated list into ints while skipping blanks."""
     return [int(x) for x in csv.split(',') if x.strip()]
 
 
 def ci_binomial(p_hat: float, n: int, z: float = 1.96):
+    """Approximate confidence interval for a Bernoulli proportion."""
     if n == 0:
         return (float('nan'), float('nan'))
     radius = z * sqrt(p_hat * (p_hat - p_hat**2) / n) if p_hat not in (0.0, 1.0) else z * sqrt((p_hat * (1 - p_hat) + 1/(2*n)) / n)
@@ -44,6 +47,7 @@ def ci_binomial(p_hat: float, n: int, z: float = 1.96):
 
 
 def resolve_error_modes(args: argparse.Namespace) -> list[str]:
+    """Handle legacy --error-mode flag while allowing comma-separated overrides."""
     if args.error_modes:
         modes = [mode.strip() for mode in args.error_modes.split(',') if mode.strip()]
         if not modes:
@@ -53,8 +57,10 @@ def resolve_error_modes(args: argparse.Namespace) -> list[str]:
 
 
 def run_error_benchmark_fixed(args: argparse.Namespace):
+    """Measure Frievald false-positive rates for each ``k`` over multiple error modes."""
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     modes = resolve_error_modes(args)
+    # Split seed deterministically so injection and verification streams are reproducible per mode.
     seed_seq = np.random.SeedSequence(args.seed)
     child_seqs = seed_seq.spawn(1 + len(modes) * 2)
     base_rng = np.random.default_rng(child_seqs[0])
@@ -68,6 +74,7 @@ def run_error_benchmark_fixed(args: argparse.Namespace):
         mode_false_positives = {mode: 0 for mode in modes}
         mode_trials = {mode: 0 for mode in modes}
         for m in range(args.matrices_per_k):
+            # Sample a fresh matrix pair for each outer iteration so trials stay independent.
             A = generate_random_matrix(args.matrix_size, rng=base_rng)
             B = generate_random_matrix(args.matrix_size, rng=base_rng)
             C_true = matmul_numpy(A, B)
@@ -75,6 +82,7 @@ def run_error_benchmark_fixed(args: argparse.Namespace):
                 inject_rng = inject_rngs[mode]
                 verifier_rng = verifier_rngs[mode]
                 for _ in range(args.corruptions_per_matrix):
+                    # Produce a corrupted product and tally whether Frievald misses it.
                     C_bad = inject_error(C_true, mode=mode, rng=inject_rng)
                     if frievald_verify(A, B, C_bad, k, rng=verifier_rng):
                         mode_false_positives[mode] += 1
@@ -106,16 +114,20 @@ def run_error_benchmark_fixed(args: argparse.Namespace):
     
     df = pd.DataFrame(records)
     if args.append and RESULTS_PATH.exists():
+        # Preserve existing CSV rows so repeated runs extend the dataset.
         df.to_csv(RESULTS_PATH, mode='a', header=False, index=False)
         print(f"Appended fixed-k benchmark to {RESULTS_PATH.resolve()}")
     else:
+        # Start fresh when append not requested or file absent.
         df.to_csv(RESULTS_PATH, index=False)
         print(f"Saved fixed-k benchmark to {RESULTS_PATH.resolve()}")
 
 
 def run_error_benchmark_detection(args: argparse.Namespace):
+    """Record iteration counts required for Frievald to detect injected errors."""
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     modes = resolve_error_modes(args)
+    # Matching seed strategy keeps detection-curve trials comparable to fixed-k runs.
     seed_seq = np.random.SeedSequence(args.seed)
     child_seqs = seed_seq.spawn(1 + len(modes) * 2)
     base_rng = np.random.default_rng(child_seqs[0])
@@ -131,6 +143,7 @@ def run_error_benchmark_detection(args: argparse.Namespace):
         inject_rng = inject_rngs[mode]
         verifier_rng = verifier_rngs[mode]
         for _ in range(trials):
+            # One corrupted matrix per trial, then measure how many iterations until rejection.
             A = generate_random_matrix(n, rng=base_rng)
             B = generate_random_matrix(n, rng=base_rng)
             C_true = matmul_numpy(A, B)
@@ -138,12 +151,14 @@ def run_error_benchmark_detection(args: argparse.Namespace):
             iterations = 0
             while True:
                 iterations += 1
+                # Probe with a single iteration each loop so we record the exact rejection iteration.
                 if not frievald_verify(A, B, C_bad, 1, rng=verifier_rng):
                     break
                 if iterations >= args.max_detection_iterations:
                     break
             detection_counts.append(iterations)
         for k in range(1, max_k + 1):
+            # Convert raw detection counts into empirical CDF / survival curve values.
             detected_by_k = sum(1 for d in detection_counts if d <= k)
             cumulative_detection_prob = detected_by_k / trials
             survival_prob = 1.0 - cumulative_detection_prob
@@ -167,14 +182,17 @@ def run_error_benchmark_detection(args: argparse.Namespace):
                 )
     df = pd.DataFrame(records)
     if args.append and RESULTS_PATH.exists():
+        # Append detection curve results to the consolidated CSV.
         df.to_csv(RESULTS_PATH, mode='a', header=False, index=False)
         print(f"Appended detection curve benchmark to {RESULTS_PATH.resolve()}")
     else:
+        # Overwrite by default so mode switches replace stale data.
         df.to_csv(RESULTS_PATH, index=False)
         print(f"Saved detection curve benchmark to {RESULTS_PATH.resolve()}")
 
 
 def build_parser():
+    """Construct the CLI argument parser shared by all error benchmarks."""
     p = argparse.ArgumentParser(description="Empirical failure probability benchmark for Frievald's algorithm")
     p.add_argument("--matrix-size", type=int, default=32, help="Matrix dimension n")
     p.add_argument("--matrices-per-k", type=int, default=25, help="Distinct (A,B) pairs per k")
