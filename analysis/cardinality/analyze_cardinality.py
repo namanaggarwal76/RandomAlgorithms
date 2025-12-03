@@ -10,38 +10,22 @@ Artifacts:
 """
 from __future__ import annotations
 
-import argparse  # Used for parsing command line arguments
-from pathlib import Path  # Used for object-oriented filesystem paths
+import argparse
+from pathlib import Path
 
-import matplotlib  # Used for creating static, animated, and interactive visualizations
+import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # Used for plotting
-import pandas as pd  # Used for data manipulation and analysis
-import seaborn as sns  # Used for statistical data visualization
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
 
 
 def ensure_dir(path: Path) -> None:
-    """
-    Ensures that a directory exists.
-    
-    Args:
-        path (Path): Path to the directory.
-    """
     path.mkdir(parents=True, exist_ok=True)
 
 
 def load_data(raw_path: Path, summary_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Loads benchmark results from CSV files.
-    
-    Args:
-        raw_path (Path): Path to the raw CSV file.
-        summary_path (Path): Path to the summary CSV file.
-        
-    Returns:
-        tuple: A tuple containing the raw DataFrame and the summary DataFrame.
-    """
     if not raw_path.exists() or not summary_path.exists():
         raise FileNotFoundError("Missing raw or summary CSV. Run the benchmarks first.")
     raw = pd.read_csv(raw_path)
@@ -50,16 +34,6 @@ def load_data(raw_path: Path, summary_path: Path) -> tuple[pd.DataFrame, pd.Data
 
 
 def plot_metric(summary: pd.DataFrame, metric: str, title: str, filename: Path, logy: bool = False) -> None:
-    """
-    Plots a specific metric.
-    
-    Args:
-        summary (pd.DataFrame): Summary DataFrame.
-        metric (str): Metric to plot.
-        title (str): Title of the plot.
-        filename (Path): Output filename.
-        logy (bool): Whether to use logarithmic scale for y-axis.
-    """
     plt.figure(figsize=(10, 6))
     display_df = summary.copy()
     display_df["dataset_label"] = display_df["distribution"].str.replace("_", " ").str.title()
@@ -140,6 +114,75 @@ def aggregate_summary(summary: pd.DataFrame) -> pd.DataFrame:
     return grouped
 
 
+def plot_asymptotic_behavior(summary: pd.DataFrame, out_dir: Path) -> None:
+    """Visualize how runtime grows with stream length and how space stays flat vs dataset size."""
+    algorithms = sorted(summary["algorithm"].unique())
+    plt.figure(figsize=(6, 5))
+    ax_time = plt.gca()
+    stream_sorted = summary.sort_values("stream_length")
+    for algo in algorithms:
+        subset = stream_sorted[stream_sorted["algorithm"] == algo]
+        if subset.empty:
+            continue
+        ax_time.plot(
+            subset["stream_length"],
+            subset["elapsed_seconds"],
+            marker="o",
+            label=algo.upper(),
+        )
+    positive_streams = stream_sorted[stream_sorted["stream_length"] > 0]
+    if not positive_streams.empty:
+        time_per_item = (
+            positive_streams["elapsed_seconds"] / positive_streams["stream_length"]
+        ).median()
+        x_ref = [
+            positive_streams["stream_length"].min(),
+            positive_streams["stream_length"].max(),
+        ]
+        y_ref = [time_per_item * x for x in x_ref]
+        ax_time.plot(x_ref, y_ref, linestyle="--", color="black", label="O(n) reference")
+    ax_time.set_xlabel("Stream Length (n)")
+    ax_time.set_ylabel("Elapsed Time (s)")
+    ax_time.set_title("Runtime Growth ~ O(n)")
+    ax_time.legend()
+    ax_time.grid(alpha=0.3, linestyle="--")
+
+    plt.tight_layout()
+    plt.savefig(out_dir / "time_complexity.png", dpi=170)
+    plt.close()
+
+    plt.figure(figsize=(6, 5))
+    ax_space = plt.gca()
+    dataset_sorted = summary.sort_values("dataset_size")
+    for algo in algorithms:
+        subset = dataset_sorted[dataset_sorted["algorithm"] == algo]
+        if subset.empty:
+            continue
+        ax_space.plot(
+            subset["dataset_size"],
+            subset["memory_bytes"],
+            marker="o",
+            label=algo.upper(),
+        )
+    if not summary.empty:
+        memory_ref = summary["memory_bytes"].median()
+        ax_space.axhline(
+            memory_ref,
+            linestyle="--",
+            color="black",
+            label="O(m)=const (m=2^p)",
+        )
+    ax_space.set_xlabel("Dataset Size (n)")
+    ax_space.set_ylabel("Memory (bytes)")
+    ax_space.set_title("Space Usage ~ O(m) independent of n")
+    ax_space.legend()
+    ax_space.grid(alpha=0.3, linestyle="--")
+
+    plt.tight_layout()
+    plt.savefig(out_dir / "space_complexity.png", dpi=170)
+    plt.close()
+
+
 def main() -> None:
     args = parse_args()
     out_dir = Path(args.out_dir)
@@ -151,6 +194,7 @@ def main() -> None:
     plot_metric(summary, "memory_bytes", "Memory Footprint (bytes)", out_dir / "memory_comparison.png", logy=True)
     plot_metric(summary, "avg_checkpoint_error", "Average Checkpoint Error", out_dir / "avg_checkpoint_error.png", logy=True)
     plot_metric(summary, "max_checkpoint_error", "Maximum Checkpoint Error", out_dir / "max_checkpoint_error.png", logy=True)
+    plot_asymptotic_behavior(summary, out_dir)
     plot_checkpoint_heatmap(raw, out_dir)
     summary.to_csv(out_dir / "cardinality_summary.csv", index=False)
     save_metrics(raw, summary, out_dir)

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-File: generate_streams.py
-Description: Generate reproducible data streams for LogLog/HLL/HLL++ benchmarks.
+Generate reproducible data streams for LogLog/HLL/HLL++ benchmarks.
 
 By default the script emits a suite of heterogeneous scenarios (uniform, zipfian,
 bounded-range, clustered) so the benchmarking pipeline can cover multiple
@@ -10,22 +9,15 @@ uniform+zipf generation for quick smoke tests.
 """
 from __future__ import annotations
 
-import argparse     # Used for parsing command-line arguments.
-from dataclasses import dataclass # Used for creating data classes.
-from pathlib import Path # Used for object-oriented filesystem paths.
-from typing import Callable, Iterable # Used for type hinting.
+import argparse
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Callable, Iterable
 
-import numpy as np  # Used for efficient numerical operations and random number generation.
+import numpy as np
 
 
 def write_stream(path: Path, data: np.ndarray) -> None:
-    """
-    Writes a stream of integers to a file.
-    
-    Args:
-        path (Path): The output file path.
-        data (np.ndarray): The array of integers to write.
-    """
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w") as fh:
         for value in data:
@@ -33,49 +25,15 @@ def write_stream(path: Path, data: np.ndarray) -> None:
 
 
 def build_uniform(rng: np.random.Generator, size: int, *, high: int = 1 << 62) -> np.ndarray:
-    """
-    Generates a stream of uniformly distributed integers.
-    
-    Args:
-        rng (np.random.Generator): Random number generator.
-        size (int): Number of elements to generate.
-        high (int): Upper bound for the random integers.
-        
-    Returns:
-        np.ndarray: Array of generated integers.
-    """
     return rng.integers(0, high, size=size, dtype=np.int64)
 
 
 def build_zipf(rng: np.random.Generator, size: int, a: float = 1.2) -> np.ndarray:
-    """
-    Generates a stream of integers following a Zipfian distribution.
-    
-    Args:
-        rng (np.random.Generator): Random number generator.
-        size (int): Number of elements to generate.
-        a (float): The distribution parameter (must be > 1).
-        
-    Returns:
-        np.ndarray: Array of generated integers.
-    """
     base = rng.zipf(a=a, size=size)
     return base.astype(np.int64)
 
 
 def build_bounded(rng: np.random.Generator, size: int, limit: int) -> np.ndarray:
-    """
-    Generates a stream of integers within a bounded range [0, limit).
-    Useful for testing low-cardinality scenarios.
-    
-    Args:
-        rng (np.random.Generator): Random number generator.
-        size (int): Number of elements to generate.
-        limit (int): Upper bound.
-        
-    Returns:
-        np.ndarray: Array of generated integers.
-    """
     return rng.integers(0, limit, size=size, dtype=np.int64)
 
 
@@ -83,14 +41,6 @@ def build_clustered(rng: np.random.Generator, size: int, burst: int = 50_000) ->
     """
     Create bursts of sequential IDs to emulate cache-friendly streams that still
     grow monotonically overall.
-    
-    Args:
-        rng (np.random.Generator): Random number generator.
-        size (int): Number of elements to generate.
-        burst (int): Size of each sequential burst.
-        
-    Returns:
-        np.ndarray: Array of generated integers.
     """
     data = []
     generated = 0
@@ -146,6 +96,12 @@ DEFAULT_SCENARIOS: tuple[Scenario, ...] = (
         size=2_000_000,
         builder=lambda rng, size: build_zipf(rng, size, a=1.05),
         description="Power-law workload representing skewed real-world IDs.",
+    ),
+    Scenario(
+        name="bounded_micro_1k",
+        size=1_000,
+        builder=lambda rng, size: build_bounded(rng, size, limit=1_000),
+        description="Micro dataset to demonstrate HLL++ Sparse Mode exactness vs HLL error.",
     ),
     Scenario(
         name="bounded_dense_500k",
